@@ -35,6 +35,17 @@ venv/
 .DS_Store
 Thumbs.db
 
+# Scratch / experimental scripts
+add_*.py
+backtest*.py
+bw_*.py
+build_features.py
+check_*.py
+train_model.py
+
+# Large exports
+europe_model.json
+
 # Test / temp scripts
 tests/__pycache__/
 *.log
