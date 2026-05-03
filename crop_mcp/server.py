@@ -1355,9 +1355,14 @@ async def run_http(host: str = "0.0.0.0", port: int = 8080):
         return JSONResponse({
             "server": "crop-mcp",
             "version": "4.6.0",
-            "description": "EU Crop Intelligence MCP Server",
+            "description": "EU Crop Intelligence MCP Server — Yield forecasts, market values & risk analysis for EU agriculture. 10 tools, 120+ NUTS2 regions, 5 crops, 25-year climate library.",
             "tools": list(TOOLS.keys()),
             "docs": "https://github.com/DasClown/CropProphEU",
+            "endpoints": {
+                "sse": "/sse",
+                "server_card": "/.well-known/mcp/server-card.json",
+                "config_schema": "/.well-known/mcp/config-schema.json",
+            }
         })
 
     async def handle_server_card(request):
@@ -1372,15 +1377,108 @@ async def run_http(host: str = "0.0.0.0", port: int = 8080):
             })
         return JSONResponse({
             "serverInfo": {"name": "crop-mcp", "version": "4.6.0"},
+            "description": "EU Crop Intelligence MCP Server. Kombiniert NASA POWER (Wetter), Open-Meteo, Eurostat (Erträge), SoilGrids (Boden), und Yahoo Finance (Marktpreise) zu einer umfassenden Agrar-Intelligenz für KI-Agenten.",
+            "homepage": "https://github.com/DasClown/CropProphEU",
+            "license": "MIT",
+            "author": {
+                "name": "CropProphEU",
+                "email": "",
+                "url": "https://github.com/DasClown",
+            },
+            "iconUrl": "https://raw.githubusercontent.com/DasClown/CropProphEU/main/static/icon.svg",
+            "capabilities": {
+                "tools": {"total": len(tools_list), "list": [t["name"] for t in tools_list]},
+                "resources": {"total": 2, "list": ["crops://parameters", "regions://list"]},
+                "prompts": {"total": 3, "list": ["analyze-region", "compare-regions", "market-overview"]},
+            },
+            "dataSources": [
+                {"name": "NASA POWER", "type": "weather", "url": "https://power.larc.nasa.gov/"},
+                {"name": "Open-Meteo", "type": "weather", "url": "https://open-meteo.com/"},
+                {"name": "Eurostat", "type": "yield", "url": "https://ec.europa.eu/eurostat/"},
+                {"name": "SoilGrids", "type": "soil", "url": "https://soilgrids.org/"},
+                {"name": "Yahoo Finance", "type": "market", "url": "https://finance.yahoo.com/"},
+                {"name": "CBOT", "type": "market", "url": "https://www.cmegroup.com/markets/agriculture/"},
+            ],
             "tools": tools_list,
-            "resources": [],
-            "prompts": [],
+            "resources": [
+                {
+                    "name": "Crop Parameters",
+                    "uri": "crops://parameters",
+                    "description": "Agronomische Parameter aller unterstützten Kulturen: GDD-Basistemperatur, Wachstumsperiode, Wasserbedarf",
+                    "mimeType": "application/json",
+                },
+                {
+                    "name": "Region List",
+                    "uri": "regions://list",
+                    "description": "Alle verfügbaren EU NUTS2-Regionen mit Koordinaten, Ländern und Hauptkulturen",
+                    "mimeType": "application/json",
+                },
+            ],
+            "prompts": [
+                {
+                    "name": "analyze-region",
+                    "description": "Complete health check for a region: yield forecast + market value + weather for all crops",
+                    "arguments": [
+                        {"name": "region", "description": "NUTS2 region code", "required": True},
+                    ],
+                },
+                {
+                    "name": "compare-regions",
+                    "description": "Compare two EU regions across all metrics for a specific crop",
+                    "arguments": [
+                        {"name": "crop", "description": "Crop name (wheat, corn, rapeseed, sunflower, barley)", "required": True},
+                        {"name": "region_a", "description": "First NUTS2 region", "required": True},
+                        {"name": "region_b", "description": "Second NUTS2 region", "required": True},
+                    ],
+                },
+                {
+                    "name": "market-overview",
+                    "description": "Current market prices and yield outlook for top EU producers",
+                    "arguments": [
+                        {"name": "crop", "description": "Crop to analyze", "required": True},
+                    ],
+                },
+            ],
+        })
+
+    async def handle_config_schema(request):
+        from starlette.responses import JSONResponse
+        return JSONResponse({
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "properties": {
+                "default_region": {
+                    "type": "string",
+                    "title": "Standard-Region",
+                    "default": "DEE0",
+                    "description": "NUTS2-Region für Standard-Abfragen (z.B. DEE0 = Sachsen-Anhalt)",
+                    "examples": ["DEE0", "FRF2", "HU21"],
+                    "pattern": "^[A-Z]{2}[A-Z0-9]{2,3}$",
+                },
+                "language": {
+                    "type": "string",
+                    "title": "Sprache",
+                    "default": "de",
+                    "enum": ["de", "en", "fr"],
+                    "description": "Ausgabesprache für Zusammenfassungen",
+                },
+                "confidence_threshold": {
+                    "type": "number",
+                    "title": "Konfidenz-Schwelle",
+                    "default": 0.3,
+                    "minimum": 0.0,
+                    "maximum": 1.0,
+                    "description": "Minimale Konfidenz für Ertragsprognosen (0.0 = alle anzeigen, 1.0 = nur sichere)",
+                },
+            },
+            "required": [],
         })
 
     app = Starlette(
         routes=[
             Route("/", endpoint=handle_root),
             Route("/.well-known/mcp/server-card.json", endpoint=handle_server_card),
+            Route("/.well-known/mcp/config-schema.json", endpoint=handle_config_schema),
             Route("/sse", endpoint=handle_sse),
             Mount("/messages/", app=sse.handle_post_message),
         ],
