@@ -1360,9 +1360,27 @@ async def run_http(host: str = "0.0.0.0", port: int = 8080):
             "docs": "https://github.com/DasClown/CropProphEU",
         })
 
+    async def handle_server_card(request):
+        from starlette.responses import JSONResponse
+        from copy import deepcopy
+        tools_list = []
+        for name, meta in TOOLS.items():
+            tools_list.append({
+                "name": name,
+                "description": meta["description"],
+                "inputSchema": meta["input_schema"],
+            })
+        return JSONResponse({
+            "serverInfo": {"name": "crop-mcp", "version": "4.6.0"},
+            "tools": tools_list,
+            "resources": [],
+            "prompts": [],
+        })
+
     app = Starlette(
         routes=[
             Route("/", endpoint=handle_root),
+            Route("/.well-known/mcp/server-card.json", endpoint=handle_server_card),
             Route("/sse", endpoint=handle_sse),
             Mount("/messages/", app=sse.handle_post_message),
         ],
