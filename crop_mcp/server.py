@@ -13,6 +13,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import os
 import sys
 import time
 from datetime import date, datetime, timedelta, timezone
@@ -67,6 +68,75 @@ except Exception:
     _HAS_NDVI = False
 
 _start_time = time.time()
+
+# Server-level language setting (from config or CLI)
+_DEFAULT_LANGUAGE = os.environ.get("CROP_LANGUAGE", "de")
+
+# ─────────────────────────────────────────────────────────────
+# Language utilities
+# ─────────────────────────────────────────────────────────────
+
+def _detect_language(kwargs: dict) -> str:
+    """Detect language from tool arguments or fall back to server default.
+    Accepts 'language' param in kwargs, otherwise uses _DEFAULT_LANGUAGE.
+    If the crop name is in English and no language is specified, stays with default.
+    """
+    lang = kwargs.get("language", _DEFAULT_LANGUAGE)
+    if lang not in ("de", "en"):
+        lang = _DEFAULT_LANGUAGE
+    return lang
+
+def _describe_gdd_en(gdd: float, crop: str) -> str:
+    norms = {"wheat": (1800, 2800), "corn": (2200, 3200), "barley": (1500, 2500)}
+    lo, hi = norms.get(crop, (1500, 2800))
+    if gdd < lo * 0.7:
+        return f"cool ({gdd:.0f}°C GDD)"
+    if gdd < lo:
+        return f"slightly cool ({gdd:.0f}°C GDD)"
+    if gdd > hi * 1.2:
+        return f"very warm ({gdd:.0f}°C GDD)"
+    if gdd > hi:
+        return f"warm ({gdd:.0f}°C GDD)"
+    return f"normal ({gdd:.0f}°C GDD)"
+
+def _describe_precip_en(precip_mm: float, crop: str) -> str:
+    norms = {"wheat": (300, 550), "corn": (350, 600), "barley": (250, 450)}
+    lo, hi = norms.get(crop, (300, 550))
+    if precip_mm < lo * 0.6:
+        return f"too dry ({precip_mm:.0f} mm)"
+    if precip_mm < lo:
+        return f"slightly dry ({precip_mm:.0f} mm)"
+    if precip_mm > hi * 1.3:
+        return f"very wet ({precip_mm:.0f} mm)"
+    if precip_mm > hi:
+        return f"wet ({precip_mm:.0f} mm)"
+    return lang
+
+def _describe_gdd_en(gdd: float, crop: str) -> str:
+    norms = {"wheat": (1800, 2800), "corn": (2200, 3200), "barley": (1500, 2500)}
+    lo, hi = norms.get(crop, (1500, 2800))
+    if gdd < lo * 0.7:
+        return f"cool ({gdd:.0f}°C GDD)"
+    if gdd < lo:
+        return f"slightly cool ({gdd:.0f}°C GDD)"
+    if gdd > hi * 1.2:
+        return f"very warm ({gdd:.0f}°C GDD)"
+    if gdd > hi:
+        return f"warm ({gdd:.0f}°C GDD)"
+    return f"normal ({gdd:.0f}°C GDD)"
+
+def _describe_precip_en(precip_mm: float, crop: str) -> str:
+    norms = {"wheat": (300, 550), "corn": (350, 600), "barley": (250, 450)}
+    lo, hi = norms.get(crop, (300, 550))
+    if precip_mm < lo * 0.6:
+        return f"too dry ({precip_mm:.0f} mm)"
+    if precip_mm < lo:
+        return f"slightly dry ({precip_mm:.0f} mm)"
+    if precip_mm > hi * 1.3:
+        return f"very wet ({precip_mm:.0f} mm)"
+    if precip_mm > hi:
+        return f"wet ({precip_mm:.0f} mm)"
+    return f"adequate ({precip_mm:.0f} mm)"
 
 # ─────────────────────────────────────────────────────────────
 # Pydantic Models (Agent-facing schemas)
@@ -805,6 +875,8 @@ def _handle_climate_scenario(**kwargs: Any) -> list[types.TextContent]:
 # ── V4.6 Market Value + Human-Readable Output ──
 
 CROP_NAMES_DE = {"wheat": "Weizen", "corn": "Mais", "barley": "Gerste"}
+CROP_NAMES = {"de": {"wheat": "Weizen", "corn": "Mais", "barley": "Gerste"},
+              "en": {"wheat": "Wheat", "corn": "Corn", "barley": "Barley"}}
 
 # Cache for training data (loaded once per crop)
 _TRAINING_CACHE: dict = {}
@@ -883,28 +955,75 @@ def _describe_precip(precip_mm: float, crop: str) -> str:
         return f"nass ({precip_mm:.0f} mm)"
     return f"ausreichend ({precip_mm:.0f} mm)"
 
-def _build_human_summary(result: dict) -> str:
+# Dispatch tables for language-aware text generation
+_DESCRIBE_GDD = {"de": _describe_gdd, "en": _describe_gdd_en}
+_DESCRIBE_PRECIP = {"de": _describe_precip, "en": _describe_precip_en}
+
+def _build_human_summary(result: dict, language: str = "de") -> str:
     if not result or result.get("status") == "error":
+        if language == "en":
+            return "No data available."
         return "Keine Daten verfuegbar."
     d = result.get("data", result)
-    crop_de = CROP_NAMES_DE.get(d.get("crop", ""), d.get("crop", ""))
+    crop_de = CROP_NAMES.get(language, CROP_NAMES["de"]).get(d.get("crop", ""), d.get("crop", ""))
     region = d.get("region", "?")
     ctry = d.get("country", "?")
     pred = d.get("predicted_yield_t_ha", 0)
     p10 = d.get("p10", 0)
     p90 = d.get("p90", 0)
-    lines = [f"**{crop_de.capitalize()} \u2013 Region {region} ({ctry})**"]
-    lines.append(f"Ertrag: {pred:.2f} t/ha (Spanne {p10:.2f}\u2013{p90:.2f})")
+    
+    if language == "en":
+        lines = [f"**{crop_de} – Region {region} ({ctry})**"]
+        lines.append(f"Yield: {pred:.2f} t/ha (range {p10:.2f}–{p90:.2f})")
+        f = d.get("features_used", {})
+        if f:
+            lines.append(f"Temperature: {_DESCRIBE_GDD.get(language, _describe_gdd_en)(f.get('gdd',0), d.get('crop',''))}")
+            lines.append(f"Precipitation: {_DESCRIBE_PRECIP.get(language, _describe_precip_en)(f.get('precipitation_mm',0), d.get('crop',''))}")
+            s = f.get('soil_moisture', 0.5)
+            lines.append(f"Soil Moisture: {'wet' if s>0.6 else 'moist' if s>0.4 else 'dry'} ({s:.0%})")
+        m = d.get("model_info", {})
+        if m:
+            mae_pct = m.get('cv_mae_pct', 0)
+            lines.append(f"Model error: ±{mae_pct:.1f}% ({m.get('n_samples','?')} samples, {m.get('countries_trained','?')} EU countries)")
+        
+        # Historical comparison
+        comp = d.get("comparison", {})
+        if comp and comp.get("status") != "no_data":
+            prev = comp.get("previous_year", {})
+            mean5 = comp.get("last_5_years_mean", 0)
+            if prev:
+                py_yield = prev.get("yield_t_ha", 0)
+                py_year = prev.get("year", "?")
+                diff = pred - py_yield
+                lines.append(f"\nvs {py_year}: {diff:+.2f} t/ha ({'above' if diff>0 else 'below'} last year)")
+            if mean5:
+                diff5 = pred - mean5
+                tag = "above" if diff5 > 0.5 else "below" if diff5 < -0.5 else "within"
+                lines.append(f"vs 5-yr avg ({mean5:.2f} t/ha): {diff5:+.2f} t/ha ({tag} of range)")
+        
+        mv = d.get("market_value", {})
+        if mv and mv.get("revenue_eur_per_ha"):
+            rev = mv["revenue_eur_per_ha"]
+            lines.append(f"\nRevenue: {rev:,.0f} €/ha (at {mv.get('price_eur_per_t','?')} €/t)")
+            mg = mv.get("margin_eur_per_ha")
+            if mg is not None:
+                lines.append(f"Margin: {mg:,.0f} €/ha")
+            lines.append(f"Price basis: {mv.get('price_source','Reference')}")
+        return "\n".join(lines)
+    
+    # German (default)
+    lines = [f"**{crop_de.capitalize()} – Region {region} ({ctry})**"]
+    lines.append(f"Ertrag: {pred:.2f} t/ha (Spanne {p10:.2f}–{p90:.2f})")
     f = d.get("features_used", {})
     if f:
-        lines.append(f"Temperatur: {_describe_gdd(f.get('gdd',0), d.get('crop',''))}")
-        lines.append(f"Niederschlag: {_describe_precip(f.get('precipitation_mm',0), d.get('crop',''))}")
+        lines.append(f"Temperatur: {_DESCRIBE_GDD.get('de', _describe_gdd)(f.get('gdd',0), d.get('crop',''))}")
+        lines.append(f"Niederschlag: {_DESCRIBE_PRECIP.get('de', _describe_precip)(f.get('precipitation_mm',0), d.get('crop',''))}")
         s = f.get('soil_moisture', 0.5)
         lines.append(f"Bodenfeuchte: {'nass' if s>0.6 else 'feucht' if s>0.4 else 'trocken'} ({s:.0%})")
     m = d.get("model_info", {})
     if m:
         mae_pct = m.get('cv_mae_pct', 0)
-        lines.append(f"Modellabweichung: \u00b1{mae_pct:.1f}% (aus {m.get('n_samples','?')} Datens\u00e4tzen, {m.get('countries_trained','?')} EU-L\u00e4ndern)")
+        lines.append(f"Modellabweichung: ±{mae_pct:.1f}% (aus {m.get('n_samples','?')} Datensätzen, {m.get('countries_trained','?')} EU-Ländern)")
     
     # Historical comparison
     comp = d.get("comparison", {})
@@ -930,12 +1049,12 @@ def _build_human_summary(result: dict) -> str:
         lines.append(f"Preisbasis: {mv.get('price_source','Referenz')}")
     return "\n".join(lines)
 
-
 class YieldAndValueInput(BaseModel):
     crop: str = Field(..., pattern=r"^(wheat|corn|barley)$", description="Crop (verified: wheat, corn, barley)")
     region: str = Field(..., min_length=4, max_length=5, description="NUTS2 code (e.g. DEE0)")
-    gdd: float | None = Field(default=None, description="Optional Waermesumme C")
-    precipitation_mm: float | None = Field(default=None, description="Optional Niederschlag mm")
+    gdd: float | None = Field(default=None, description="Optional GDD (growing degree days)")
+    precipitation_mm: float | None = Field(default=None, description="Optional precipitation in mm")
+    language: str | None = Field(default=None, description="Output language: 'de' (German, default) or 'en' (English). Auto-detected if omitted.")
 
 
 def _handle_yield_and_value(**kwargs: Any) -> list[types.TextContent]:
@@ -970,9 +1089,10 @@ def _handle_yield_and_value(**kwargs: Any) -> list[types.TextContent]:
     r["comparison"] = _get_crop_comparison(v.crop, v.region)
     r["country"] = cnt
     r["crop"] = v.crop
-    summary = _build_human_summary({"data": r})
+    lang = v.language or _DEFAULT_LANGUAGE
+    summary = _build_human_summary({"data": r}, language=lang)
     return [types.TextContent(type="text", text=json.dumps({
-        "status":"ok", "data":r, "summary":summary, "language":"de",
+        "status":"ok", "data":r, "summary":summary, "language":lang,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }))]
 
@@ -1122,8 +1242,9 @@ TOOLS = {
         "description": (
             "Combined yield forecast + market value estimation. "
             "Returns yield in t/ha AND expected revenue in EUR/ha at current market prices. "
-            "Output includes a plain-language German summary with weather translation "
-            "(Temperatur, Niederschlag, Bodenfeuchte). "
+            "Output includes a plain-language summary in German (default) or English. "
+            "Set language='en' for English output, language='de' for German. "
+            "Auto-detects from the language parameter if provided. "
             "Verified crops: wheat, corn, barley. "
             "Rapeseed and sunflower: no Eurostat yield data available."
         ),
@@ -1377,7 +1498,7 @@ async def run_http(host: str = "0.0.0.0", port: int = 8080):
             })
         return JSONResponse({
             "serverInfo": {"name": "crop-mcp", "version": "4.6.0"},
-            "description": "EU Crop Intelligence MCP Server. Kombiniert NASA POWER (Wetter), Open-Meteo, Eurostat (Erträge), SoilGrids (Boden), und Yahoo Finance (Marktpreise) zu einer umfassenden Agrar-Intelligenz für KI-Agenten.",
+            "description": "EU Crop Intelligence MCP Server. Combines NASA POWER (weather), Open-Meteo, Eurostat (yields), SoilGrids (soil), and Yahoo Finance (market prices) into comprehensive crop intelligence for AI agents. Output in German or English.",
             "homepage": "https://github.com/DasClown/CropProphEU",
             "license": "MIT",
             "author": {
@@ -1457,10 +1578,10 @@ async def run_http(host: str = "0.0.0.0", port: int = 8080):
                 },
                 "language": {
                     "type": "string",
-                    "title": "Sprache",
+                    "title": "Language",
                     "default": "de",
-                    "enum": ["de", "en", "fr"],
-                    "description": "Ausgabesprache für Zusammenfassungen",
+                    "enum": ["de", "en"],
+                    "description": "Output language for summaries: 'de' (German) or 'en' (English)",
                 },
                 "confidence_threshold": {
                     "type": "number",
@@ -1499,5 +1620,10 @@ if __name__ == "__main__":
         print(json.dumps([{"name": n, "description": t["description"][:80]}
                           for n, t in TOOLS.items()], indent=2))
     else:
+        # Parse --language from CLI args before starting
+        for i, arg in enumerate(sys.argv):
+            if arg == "--language" and i + 1 < len(sys.argv):
+                _DEFAULT_LANGUAGE = sys.argv[i + 1]
+                break
         import asyncio
         asyncio.run(main())

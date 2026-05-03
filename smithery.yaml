@@ -11,6 +11,11 @@ startCommand:
         type: boolean
         default: false
         description: "Start in HTTP/SSE mode instead of stdio (for remote connectivity)"
+      language:
+        type: string
+        default: "de"
+        enum: ["de", "en"]
+        description: "Output language: 'de' (German) or 'en' (English)"
     required: []
   commandFunction:
     |-
@@ -18,6 +23,9 @@ startCommand:
       const args = [];
       if (config.httpMode) {
         args.push('--http', '--port', '8080');
+      }
+      if (config.language && config.language !== 'de') {
+        args.push('--language', config.language);
       }
       return {
         command: 'crop-mcp',
