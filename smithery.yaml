@@ -1,0 +1,26 @@
+# Smithery.ai configuration
+# https://smithery.ai/docs/servers/publish
+
+startCommand:
+  type: stdio
+  configSchema:
+    # JSON Schema defining configuration options for end-users
+    type: object
+    properties:
+      httpMode:
+        type: boolean
+        default: false
+        description: "Start in HTTP/SSE mode instead of stdio (for remote connectivity)"
+    required: []
+  commandFunction:
+    |-
+    function(config) {
+      const args = [];
+      if (config.httpMode) {
+        args.push('--http', '--port', '8080');
+      }
+      return {
+        command: 'crop-mcp',
+        args: args
+      };
+    }

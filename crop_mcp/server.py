@@ -1340,16 +1340,16 @@ async def run_http(host: str = "0.0.0.0", port: int = 8080):
     except ImportError:
         print("HTTP mode requires: pip install mcp[httpx] uvicorn")
         sys.exit(1)
-    
+
     sse = SseServerTransport("/messages/")
-    
+
     async def handle_sse(request):
         async with sse.connect_sse(
-            request.scope, request.receive, request._send,
-            server.create_initialization_options()
-        ) as session:
-            await server.run(session, request.app)
-    
+            request.scope, request.receive, request._send
+        ) as streams:
+            read_stream, write_stream = streams
+            await server.run(read_stream, write_stream, server.create_initialization_options())
+
     app = Starlette(
         routes=[
             Route("/sse", endpoint=handle_sse),
@@ -1357,8 +1357,10 @@ async def run_http(host: str = "0.0.0.0", port: int = 8080):
         ],
     )
     import uvicorn
-    print(f"crop-mcp HTTP server on http://{host}:{port}/sse")
-    uvicorn.run(app, host=host, port=port)
+    config = uvicorn.Config(app, host=host, port=port)
+    srv = uvicorn.Server(config)
+    print(f"🌾 crop-mcp HTTP server on http://{host}:{port}/sse")
+    await srv.serve()
 
 
 if __name__ == "__main__":
