@@ -1350,8 +1350,19 @@ async def run_http(host: str = "0.0.0.0", port: int = 8080):
             read_stream, write_stream = streams
             await server.run(read_stream, write_stream, server.create_initialization_options())
 
+    async def handle_root(request):
+        from starlette.responses import JSONResponse
+        return JSONResponse({
+            "server": "crop-mcp",
+            "version": "4.6.0",
+            "description": "EU Crop Intelligence MCP Server",
+            "tools": list(TOOLS.keys()),
+            "docs": "https://github.com/DasClown/CropProphEU",
+        })
+
     app = Starlette(
         routes=[
+            Route("/", endpoint=handle_root),
             Route("/sse", endpoint=handle_sse),
             Mount("/messages/", app=sse.handle_post_message),
         ],
