@@ -20,7 +20,7 @@ pip install git+https://github.com/DasClown/CropProphEU.git
 
 | Tool | What it does | 
 |------|-------------|
-| `yield_and_value` | **NEW** — Combined yield + market value (€/ha) with plain-language German output |
+| `yield_and_value` | **NEW** — Combined yield + market value (€/ha) with plain-language summary in German or English (auto-detected via `language` parameter) |
 | `europe_yield_forecast` | Pan-European yield forecast (3 crops, 25 countries) with Yield-at-Risk |
 | `crop_forecast` | Current season status: temperature, rain, soil moisture, drought index |
 | `season_comparison` | Compare this season to historical years |
@@ -101,23 +101,22 @@ docker run -p 8080:8080 crop-mcp crop-mcp --http --port 8080
 
 ## Example Output
 
+**German (default):**
 ```
 Weizen – Region DE11 (DE)
 Ertrag: 7.68 t/ha (Spanne 6.67–8.63)
-Temperatur: warm (3050°C Wärmesumme)
-Niederschlag: nass (650 mm)
-Bodenfeuchte: feucht (50%)
-Modellabweichung: ±11.2% (1483 Datensätze, 25 EU-Länder)
-
-Vergleich zu 2024: +0.60 t/ha (über Vorjahr)
-Vergleich zu 5-J-Mittel (7.44 t/ha): +0.24 t/ha (im Rahmen)
-
-Erlös: 1.805 €/ha (bei 235 €/t)
-Deckungsbeitrag: 1.155 €/ha
-Preisbasis: CBOT Chicago (live) + MATIF-Aufschlag
+...
 ```
 
-All output is in German, plain language — no jargon. Structured data is also returned in JSON.
+**English (with `language="en"`):**
+```
+Wheat – Region DE11 (DE)
+Yield: 7.68 t/ha (range 6.67–8.63)
+Temperature: warm (3050°C GDD)
+...
+```
+
+All output is available in **German** (default) or **English**. Set `language="en"` when calling `yield_and_value` for English output. The JSON data is always returned in English field names; the `summary` field adapts to the requested language.
 
 ---
 
