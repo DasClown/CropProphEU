@@ -1,11 +1,17 @@
 # 🌾 crop-mcp
 
+[![Smithery](https://smithery.ai/badge/@crop-mcp/CropProphEU)](https://smithery.ai/servers/crop-mcp/CropProphEU)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/DasClown/CropProphEU?style=flat)](https://github.com/DasClown/CropProphEU/stargazers)
+
 **EU Crop Intelligence MCP Server** — Yield forecasts, market values & risk analysis for 25 EU countries.
 
 Get AI agents to answer: *"How will wheat perform in Baden-Württemberg this year? What's it worth at current market prices?"*
 
-```
+```bash
 pip install git+https://github.com/DasClown/CropProphEU.git
+# or try it on Smithery: https://smithery.ai/servers/crop-mcp/CropProphEU
 ```
 
 ---
