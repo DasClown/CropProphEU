@@ -7,6 +7,8 @@
 - `/.well-known/mcp/server-card.json` Endpoint (10 Tools)
 - `start_http.py` und `start_https.py` Wrapper-Skripte
 - Automatischer Health-Check Cron-Job (alle 2 Tage)
+- Telegram Bot für Crop + Drug Intelligence (/home/j/bots/telegram_bot.py)
+- Optimierungs-Cron (wöchentlich): Data-Source-Scan + Verbesserungsvorschläge
 
 ### Fixed
 - `pyproject.toml` build-backend korrigiert (setuptools.build_meta)
