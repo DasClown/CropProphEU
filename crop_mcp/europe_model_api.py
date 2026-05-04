@@ -56,7 +56,8 @@ def _load_cached_training(crop: str = "wheat"):
 def predict_europe_yield(region_code, country, crop="wheat",
                          gdd=1400, precip_mm=350, solar_kwh=4.5, soil_moisture=0.5,
                          soc_g_kg=None, ph=None, clay_pct=None, sand_pct=None, silt_pct=None,
-                         nitrogen_g_kg=None, cec_cmol_kg=None):
+                         nitrogen_g_kg=None, cec_cmol_kg=None,
+                         bdod_kg_dm3=None, cfvo_pct=None, coarse_pct=None, awc_mm_m=None):
     """Predict yield using European model (crop-specific, verified data only)."""
     if crop not in VERIFIED_CROPS:
         return {
@@ -75,7 +76,10 @@ def predict_europe_yield(region_code, country, crop="wheat",
 
     # Load soil defaults from cache if not provided
     if soc_g_kg is None:
-        _soil_cache_path = os.path.join(DATA_DIR, 'soil_cache.json')
+        _soil_cache_path = os.path.join(os.path.dirname(MODEL_DIR), 'soil_cache.json')
+        # Also try data/ dir
+        if not os.path.exists(_soil_cache_path):
+            _soil_cache_path = os.path.join(DATA_DIR, 'soil_cache.json')
         _soil = {}
         if os.path.exists(_soil_cache_path):
             with open(_soil_cache_path) as _f:
@@ -87,10 +91,17 @@ def predict_europe_yield(region_code, country, crop="wheat",
         silt_pct = _soil.get('silt_pct', 35.0)
         nitrogen_g_kg = _soil.get('nitrogen_g_kg', 1.5)
         cec_cmol_kg = _soil.get('cec_cmol_kg', 18.0)
+        bdod_kg_dm3 = _soil.get('bdod_kg_dm3', 1.35)
+        cfvo_pct = _soil.get('cfvo_pct', 5.0)
+        coarse_pct = _soil.get('coarse_pct', 5.0)
+        awc_mm_m = _soil.get('awc_mm_m', 150.0)
+    elif bdod_kg_dm3 is None:
+        bdod_kg_dm3 = 1.35; cfvo_pct = 5.0; coarse_pct = 5.0; awc_mm_m = 150.0
 
     # Build feature vector
     row = [gdd, precip_mm, solar_kwh, soil_moisture, 0, 0,
-           soc_g_kg, ph, clay_pct, sand_pct, silt_pct, nitrogen_g_kg, cec_cmol_kg]
+           soc_g_kg, ph, clay_pct, sand_pct, silt_pct, nitrogen_g_kg, cec_cmol_kg,
+           bdod_kg_dm3, cfvo_pct, coarse_pct, awc_mm_m]
     one_hot = [0] * len(countries)
     if country in country_idx:
         one_hot[country_idx[country]] = 1
@@ -152,6 +163,12 @@ def predict_europe_yield(region_code, country, crop="wheat",
             "clay_pct": round(clay_pct, 1),
             "sand_pct": round(sand_pct, 1),
             "silt_pct": round(silt_pct, 1),
+            "nitrogen_g_kg": round(nitrogen_g_kg, 2),
+            "cec_cmol_kg": round(cec_cmol_kg, 1),
+            "bdod_kg_dm3": round(bdod_kg_dm3, 2),
+            "cfvo_pct": round(cfvo_pct, 1),
+            "coarse_pct": round(coarse_pct, 1),
+            "awc_mm_m": round(awc_mm_m, 1),
         },
     }
 

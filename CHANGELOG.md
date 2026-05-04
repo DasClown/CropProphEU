@@ -1,8 +1,29 @@
 # Changelog — CropProphEU
 
-## 2026-05-04
+## 2026-05-04 — V4.8
 
-### Added (V4.7)
+### Added
+- **Modell-Retrain mit V4.7 Soil-Features**: Alle 3 Modelle (wheat, corn, barley) mit bdod, cfvo, coarse_pct, awc_mm_m neu gebaut + trainiert
+- **Frost Outlook** auch in `yield_and_value` Tool
+- `run_pipeline_v2.py`: Automatisierte Build+Train Sequenz für alle Kulturen
+
+### Changed
+- `build_europe.py`: 4 neue Soil-Features in Trainingsdaten (17 statt 13 Feature-Spalten)
+- `train_europe_fast.py`: `NUM_FEATURES` auf 17 Features erweitert
+- `europe_model_api.py`: Akzeptiert 4 neue Soil-Parameter, lädt sie aus dem Cache
+- `soil_cache.json` → `data/` kopiert für API-Kompatibilität
+- `build_europe.py`: Import-Fix (`core.regions` → `crop_mcp.core.regions`)
+
+### Performance
+| Crop | V4.6 MAE | V4.8 MAE | Δ | R² |
+|------|----------|----------|---|----|
+| Weizen | 0.598 (11.2%) | **0.588 (11.0%)** | **-1.7%** ✅ | 0.880 |
+| Mais | 0.920 (11.6%) | **0.918 (11.6%)** | -0.2% | 0.719 |
+| Gerste | 0.540 (11.3%) | **0.534 (11.2%)** | **-1.1%** ✅ | 0.856 |
+
+**Neue Top-Features**: coarse_pct → #1 Gerste, #2 Weizen; AWC → #2 Mais, #4 Gerste; bdod → #9 Weizen
+
+## 2026-05-04 — V4.7
 - **Bulk Density (bdod)**: aus SoilGrids v2 API → `bdod_kg_dm3` in jedem Soil-Profil
 - **Coarse Fragments (cfvo)**: aus SoilGrids v2 → `cfvo_pct` in jedem Soil-Profil
 - **Coarse Fragments (LUCAS)**: `coarse_pct` aus LUCAS Textur-Daten (war bereits in CSV, wurde nicht ausgegeben)

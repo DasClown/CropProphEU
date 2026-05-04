@@ -7,10 +7,10 @@ import json, urllib.request, sys, time, os, random
 from datetime import date
 
 sys.path.insert(0, '/home/j/crop-mcp')
-from core.regions import REGIONS, get_region, get_crop
-from sources.weather import get_historical, calc_gdd
-from sources.power import season_solar_and_soil, get_power_data
-from sources.power import SOLAR_PARAM, SOIL_M1, T2M_MAX, T2M_MIN, PRECIP
+from crop_mcp.core.regions import REGIONS, get_region, get_crop
+from crop_mcp.sources.weather import get_historical, calc_gdd
+from crop_mcp.sources.power import season_solar_and_soil, get_power_data
+from crop_mcp.sources.power import SOLAR_PARAM, SOIL_M1, T2M_MAX, T2M_MIN, PRECIP
 
 CHECKPOINT = '/home/j/crop-mcp/europe_checkpoint.json'
 OUTPUT = '/home/j/crop-mcp/europe_training_data.json'
@@ -179,6 +179,11 @@ def build_one_sample(cntry, reg_code, year, crop):
             "silt_pct": round(_soil.get("silt_pct", 35.0), 1),
             "nitrogen_g_kg": round(_soil.get("nitrogen_g_kg", 1.5), 2),
             "cec_cmol_kg": round(_soil.get("cec_cmol_kg", 18.0), 1),
+            # V4.7 Soil-Tiefe Features: Bulk Density, Coarse Fragments, AWC
+            "bdod_kg_dm3": round(_soil.get("bdod_kg_dm3", 1.35), 2),
+            "cfvo_pct": round(_soil.get("cfvo_pct", 5.0), 1),
+            "coarse_pct": round(_soil.get("coarse_pct", 5.0), 1),
+            "awc_mm_m": round(_soil.get("awc_mm_m", 150.0), 1),
             "yield_t_ha": yield_val,
         }
     except Exception:

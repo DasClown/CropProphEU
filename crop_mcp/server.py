@@ -1150,6 +1150,17 @@ def _handle_yield_and_value(**kwargs: Any) -> list[types.TextContent]:
     r["country"] = cnt
     r["crop"] = v.crop
 
+    # V4.7: Frost outlook for yield_and_value
+    try:
+        fc = get_forecast(reg.latitude, reg.longitude, reg.altitude)
+        r["frost_outlook"] = _analyze_frost_outlook(
+            fc.get("forecast", []),
+            get_crop(v.crop).frost_sensitive,
+            date.fromisoformat(v.as_of_date) if v.as_of_date else date.today()
+        )
+    except Exception:
+        r["frost_outlook"] = {"forecast_frost_days": 0, "risk_level": "unknown"}
+
     # Historical comparison
     r["comparison"] = _get_crop_comparison(v.crop, v.region)
     r["country"] = cnt

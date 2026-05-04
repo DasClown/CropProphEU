@@ -35,7 +35,8 @@ years = sorted(set(d["year"] for d in all_data))
 
 NUM_FEATURES = ["gdd", "precip_mm", "solar_kwh", "soil_moisture", "solar_anom_pct", "soil_anom_pct",
                 "soc_g_kg", "ph", "clay_pct", "sand_pct", "silt_pct",
-                "nitrogen_g_kg", "cec_cmol_kg"]
+                "nitrogen_g_kg", "cec_cmol_kg",
+                "bdod_kg_dm3", "cfvo_pct", "coarse_pct", "awc_mm_m"]
 
 def prep_data(data_subset):
     X, y = [], []
