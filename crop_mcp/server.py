@@ -138,6 +138,61 @@ def _describe_precip_en(precip_mm: float, crop: str) -> str:
         return f"wet ({precip_mm:.0f} mm)"
     return f"adequate ({precip_mm:.0f} mm)"
 
+
+# ─────────────────────────────────────────────────────────────
+# V4.7: Frost Outlook Analysis
+# ─────────────────────────────────────────────────────────────
+
+def _analyze_frost_outlook(forecast_days: list, frost_sensitive: bool,
+                           ref_date: date) -> dict:
+    """
+    Analyze the 16-day forecast for frost events (t_min < 0°C).
+    Returns structured frost outlook for crop_forecast output.
+    """
+    import math
+    frost_days = []
+    for day in forecast_days:
+        t_min = day.get("t_min")
+        day_date_str = day.get("date", "")
+        if t_min is not None and t_min < 0 and day_date_str:
+            frost_days.append({
+                "date": day_date_str,
+                "t_min_c": round(t_min, 1),
+            })
+
+    next_frost = frost_days[0] if frost_days else None
+    frost_count_5d = sum(1 for d in frost_days
+                         if d["date"] <= (ref_date + timedelta(days=5)).isoformat())
+
+    # Risk assessment
+    risk = "none"
+    if frost_sensitive and frost_days:
+        if frost_count_5d >= 2:
+            risk = "high"
+        elif frost_count_5d >= 1:
+            risk = "moderate"
+        elif len(frost_days) >= 3:
+            risk = "low"
+    elif not frost_sensitive and frost_days:
+        risk = "low"  # Frost-hardy crops (winter wheat, barley) can tolerate some frost
+
+    # Critical period check (flowering/early growth)
+    critical = False
+    if frost_sensitive and next_frost:
+        # Corn emergence is most critical (May-June)
+        # For now, flag if frost is in the forecast at all for sensitive crops
+        critical = frost_sensitive and frost_count_5d > 0
+
+    return {
+        "forecast_frost_days": len(frost_days),
+        "frost_days_detail": frost_days[:5],  # Show next 5
+        "next_frost_date": next_frost["date"] if next_frost else None,
+        "next_frost_temp_c": next_frost["t_min_c"] if next_frost else None,
+        "frost_in_5_days": frost_count_5d,
+        "risk_level": risk,
+        "critical_period_alert": critical,
+    }
+
 # ─────────────────────────────────────────────────────────────
 # Pydantic Models (Agent-facing schemas)
 # ─────────────────────────────────────────────────────────────
@@ -437,6 +492,14 @@ def _handle_crop_forecast(**kwargs: Any) -> list[types.TextContent]:
     elif solar_anom and solar_anom > 20:
         yield_signals.append("high_solar_radiation")
 
+    # V4.7: Frost warning from forecast
+    frost_outlook = _analyze_frost_outlook(forecast.get("forecast", []),
+                                            crop.frost_sensitive, ref_date)
+    if frost_outlook["critical_period_alert"]:
+        yield_signals.append("frost_warning_next_5_days")
+    elif frost_outlook["risk_level"] == "high":
+        yield_signals.append("frost_warning")
+
     # 8. Confidence
     season_days_total = (date.fromisoformat(season_end) - date.fromisoformat(season_start)).days
     season_days_elapsed = (ref_date - date.fromisoformat(season_start)).days
@@ -487,6 +550,8 @@ def _handle_crop_forecast(**kwargs: Any) -> list[types.TextContent]:
             "extremes": season.get("extremes", {
                 "hot_days_gt_30c": 0, "frost_days_lt_0c": 0, "rainy_days_gt_5mm": 0
             }),
+            # V4.7: Frost analysis from 16-day forecast (reuses computed frost_outlook)
+            "frost_outlook": frost_outlook,
             "historical": historical_gdd[-5:] if len(historical_gdd) > 5 else historical_gdd,
             "signals": yield_signals,
             "confidence": confidence,

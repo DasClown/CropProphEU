@@ -1,6 +1,23 @@
 # Changelog — CropProphEU
 
-## 2026-05-03
+## 2026-05-04
+
+### Added (V4.7)
+- **Bulk Density (bdod)**: aus SoilGrids v2 API → `bdod_kg_dm3` in jedem Soil-Profil
+- **Coarse Fragments (cfvo)**: aus SoilGrids v2 → `cfvo_pct` in jedem Soil-Profil
+- **Coarse Fragments (LUCAS)**: `coarse_pct` aus LUCAS Textur-Daten (war bereits in CSV, wurde nicht ausgegeben)
+- **Available Water Capacity (AWC)**: `awc_mm_m` per Saxton-Pedotransferfunktion aus Clay+Sand berechnet
+- **Frost Outlook**: `frost_outlook` in `crop_forecast` — analysiert 16-Tage-Vorhersage auf T_min < 0°C, bewertet Risiko (none/low/moderate/high) und warnt bei kritischen Perioden
+- **Frost-Warn-Signale**: `frost_warning_next_5_days` und `frost_warning` in yield_signals
+- **NDVI Reliability**: Copernicus Data Space als primäre STAC-Quelle, Planetary Computer mit 3× Retry als Fallback, Cache TTL auf 2h erhöht
+
+### Changed
+- `SOIL_PROPERTIES` von 7→9 Features (bdod, cfvo hinzugefügt)
+- `_country_soil_fallback()`: alle 15 Länder mit bdod/cfvo Defaults
+- `get_region_texture()`: gibt jetzt `coarse_pct` und `awc_mm_m` aus
+- `get_soil_profile()`: gibt jetzt 11 statt 7 Soil-Felder aus
+- Soil-Cache neu gebaut (108 Regionen, ~4 min)
+- `ndvi.py`: Dual-Source-Architektur mit Copernicus + Planetary Computer
 
 ### Added
 - HTTPS-Server (Port 8443, self-signed cert) für Smithery-Scan

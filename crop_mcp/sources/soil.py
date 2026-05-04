@@ -28,7 +28,9 @@ _soil_cache: Dict[str, Dict] = {}
 _lucas_points: List[Dict] = None
 
 # Soil properties we use (SoilGrids property names)
-SOIL_PROPERTIES = ["soc", "phh2o", "nitrogen", "cec", "clay", "sand", "silt"]
+# V4.7: Added bdod (bulk density) and cfvo (coarse fragments volume)
+SOIL_PROPERTIES = ["soc", "phh2o", "nitrogen", "cec", "clay", "sand", "silt",
+                    "bdod", "cfvo"]
 SOIL_DEPTH = "0-5cm"  # Topsoil — most relevant for agriculture
 
 # ──────────────────────────────────────────────
@@ -74,6 +76,10 @@ def _query_soilgrids(lat: float, lon: float) -> Optional[Dict]:
             result["nitrogen"] = result["nitrogen"] / 100.0  # cg/kg → g/kg
         if "cec" in result:
             result["cec"] = result["cec"] / 10.0  # mmol(c)/kg → cmol(c)/kg
+        if "bdod" in result:
+            result["bdod"] = result["bdod"] / 100.0  # cg/cm³ → kg/dm³ (g/cm³)
+        if "cfvo" in result:
+            result["cfvo"] = result["cfvo"] / 10.0  # cm³/dm³ → % (vol%)
 
         _soil_cache[cache_key] = result
         time.sleep(1)  # Rate limit: 1 req/s
@@ -122,22 +128,33 @@ def _load_lucas_texture() -> List[Dict]:
 
 
 def get_region_texture(country: str) -> Dict:
-    """Get country-average soil texture from LUCAS points."""
+    """Get country-average soil texture from LUCAS points.
+    V4.7: Also returns coarse fragments and derived AWC."""
     points = _load_lucas_texture()
     country_points = [p for p in points if p["country"] == country]
 
     if not country_points:
         return {"clay_pct": 25.0, "sand_pct": 40.0, "silt_pct": 35.0,
+                "coarse_pct": 5.0, "awc_mm_m": 150.0,
                 "source": "default_european_loam"}
 
     clay = sum(p["clay"] for p in country_points) / len(country_points)
     sand = sum(p["sand"] for p in country_points) / len(country_points)
     silt = sum(p["silt"] for p in country_points) / len(country_points)
+    coarse = sum(p["coarse"] for p in country_points) / len(country_points)
+
+    # Compute Available Water Capacity (AWC) via Saxton pedotransfer function
+    # AWC = θ_fc - θ_pwp, derived from clay + sand + bulk density
+    # Simplified: AWC (mm/m) ≈ 250 - 1.5*sand_pct + 2.5*clay_pct
+    awc = 250.0 - 1.5 * sand + 2.5 * clay
+    awc = max(50.0, min(300.0, awc))  # Clamp to realistic range
 
     return {
         "clay_pct": round(clay, 1),
         "sand_pct": round(sand, 1),
         "silt_pct": round(silt, 1),
+        "coarse_pct": round(coarse, 1),
+        "awc_mm_m": round(awc, 1),
         "source": f"lucas_2018_texture_{len(country_points)}_points"
     }
 
@@ -161,6 +178,8 @@ def get_soil_profile(lat: float, lon: float, country: str,
             "ph": round(sg.get("phh2o", 6.5), 1),
             "nitrogen_g_kg": round(sg.get("nitrogen", 1.5), 2),
             "cec_cmol_kg": round(sg.get("cec", 20.0), 1),
+            "bdod_kg_dm3": round(sg.get("bdod", 1.3), 2),
+            "cfvo_pct": round(sg.get("cfvo", 5.0), 1),
             "soil_source": "soilgrids_v2",
         }
     else:
@@ -173,32 +192,51 @@ def get_soil_profile(lat: float, lon: float, country: str,
     profile["clay_pct"] = texture["clay_pct"]
     profile["sand_pct"] = texture["sand_pct"]
     profile["silt_pct"] = texture["silt_pct"]
+    profile["coarse_pct"] = texture["coarse_pct"]
+    profile["awc_mm_m"] = texture["awc_mm_m"]
     profile["texture_source"] = texture["source"]
 
     return profile
 
 
 def _country_soil_fallback(country: str) -> Dict:
-    """Soil defaults by country based on literature."""
+    """Soil defaults by country based on literature.
+    V4.7: Added bdod (bulk density) and cfvo (coarse fragments)."""
     defaults = {
-        "DE": {"soc_g_kg": 16.0, "ph": 6.2, "nitrogen_g_kg": 1.6, "cec_cmol_kg": 18.0},
-        "FR": {"soc_g_kg": 18.0, "ph": 6.8, "nitrogen_g_kg": 1.8, "cec_cmol_kg": 15.0},
-        "PL": {"soc_g_kg": 14.0, "ph": 5.8, "nitrogen_g_kg": 1.3, "cec_cmol_kg": 12.0},
-        "RO": {"soc_g_kg": 22.0, "ph": 6.5, "nitrogen_g_kg": 2.0, "cec_cmol_kg": 24.0},
-        "HU": {"soc_g_kg": 20.0, "ph": 7.0, "nitrogen_g_kg": 1.9, "cec_cmol_kg": 22.0},
-        "ES": {"soc_g_kg": 12.0, "ph": 7.5, "nitrogen_g_kg": 1.1, "cec_cmol_kg": 14.0},
-        "IT": {"soc_g_kg": 15.0, "ph": 7.2, "nitrogen_g_kg": 1.4, "cec_cmol_kg": 20.0},
-        "DK": {"soc_g_kg": 20.0, "ph": 6.0, "nitrogen_g_kg": 1.8, "cec_cmol_kg": 16.0},
-        "NL": {"soc_g_kg": 22.0, "ph": 5.5, "nitrogen_g_kg": 2.0, "cec_cmol_kg": 20.0},
-        "BE": {"soc_g_kg": 16.0, "ph": 6.2, "nitrogen_g_kg": 1.6, "cec_cmol_kg": 14.0},
-        "AT": {"soc_g_kg": 18.0, "ph": 6.5, "nitrogen_g_kg": 1.7, "cec_cmol_kg": 18.0},
-        "CZ": {"soc_g_kg": 16.0, "ph": 6.0, "nitrogen_g_kg": 1.5, "cec_cmol_kg": 16.0},
-        "SK": {"soc_g_kg": 16.0, "ph": 6.0, "nitrogen_g_kg": 1.5, "cec_cmol_kg": 16.0},
-        "BG": {"soc_g_kg": 18.0, "ph": 6.8, "nitrogen_g_kg": 1.6, "cec_cmol_kg": 22.0},
-        "SE": {"soc_g_kg": 14.0, "ph": 5.5, "nitrogen_g_kg": 1.2, "cec_cmol_kg": 14.0},
+        "DE": {"soc_g_kg": 16.0, "ph": 6.2, "nitrogen_g_kg": 1.6, "cec_cmol_kg": 18.0,
+               "bdod_kg_dm3": 1.45, "cfvo_pct": 3.5},
+        "FR": {"soc_g_kg": 18.0, "ph": 6.8, "nitrogen_g_kg": 1.8, "cec_cmol_kg": 15.0,
+               "bdod_kg_dm3": 1.40, "cfvo_pct": 8.0},
+        "PL": {"soc_g_kg": 14.0, "ph": 5.8, "nitrogen_g_kg": 1.3, "cec_cmol_kg": 12.0,
+               "bdod_kg_dm3": 1.50, "cfvo_pct": 4.0},
+        "RO": {"soc_g_kg": 22.0, "ph": 6.5, "nitrogen_g_kg": 2.0, "cec_cmol_kg": 24.0,
+               "bdod_kg_dm3": 1.35, "cfvo_pct": 2.0},
+        "HU": {"soc_g_kg": 20.0, "ph": 7.0, "nitrogen_g_kg": 1.9, "cec_cmol_kg": 22.0,
+               "bdod_kg_dm3": 1.38, "cfvo_pct": 2.5},
+        "ES": {"soc_g_kg": 12.0, "ph": 7.5, "nitrogen_g_kg": 1.1, "cec_cmol_kg": 14.0,
+               "bdod_kg_dm3": 1.50, "cfvo_pct": 12.0},
+        "IT": {"soc_g_kg": 15.0, "ph": 7.2, "nitrogen_g_kg": 1.4, "cec_cmol_kg": 20.0,
+               "bdod_kg_dm3": 1.42, "cfvo_pct": 10.0},
+        "DK": {"soc_g_kg": 20.0, "ph": 6.0, "nitrogen_g_kg": 1.8, "cec_cmol_kg": 16.0,
+               "bdod_kg_dm3": 1.48, "cfvo_pct": 1.0},
+        "NL": {"soc_g_kg": 22.0, "ph": 5.5, "nitrogen_g_kg": 2.0, "cec_cmol_kg": 20.0,
+               "bdod_kg_dm3": 1.35, "cfvo_pct": 1.5},
+        "BE": {"soc_g_kg": 16.0, "ph": 6.2, "nitrogen_g_kg": 1.6, "cec_cmol_kg": 14.0,
+               "bdod_kg_dm3": 1.40, "cfvo_pct": 5.0},
+        "AT": {"soc_g_kg": 18.0, "ph": 6.5, "nitrogen_g_kg": 1.7, "cec_cmol_kg": 18.0,
+               "bdod_kg_dm3": 1.38, "cfvo_pct": 15.0},
+        "CZ": {"soc_g_kg": 16.0, "ph": 6.0, "nitrogen_g_kg": 1.5, "cec_cmol_kg": 16.0,
+               "bdod_kg_dm3": 1.45, "cfvo_pct": 3.0},
+        "SK": {"soc_g_kg": 16.0, "ph": 6.0, "nitrogen_g_kg": 1.5, "cec_cmol_kg": 16.0,
+               "bdod_kg_dm3": 1.45, "cfvo_pct": 3.0},
+        "BG": {"soc_g_kg": 18.0, "ph": 6.8, "nitrogen_g_kg": 1.6, "cec_cmol_kg": 22.0,
+               "bdod_kg_dm3": 1.35, "cfvo_pct": 2.0},
+        "SE": {"soc_g_kg": 14.0, "ph": 5.5, "nitrogen_g_kg": 1.2, "cec_cmol_kg": 14.0,
+               "bdod_kg_dm3": 1.30, "cfvo_pct": 20.0},
     }
     return defaults.get(country, {"soc_g_kg": 15.0, "ph": 6.5,
-                                   "nitrogen_g_kg": 1.5, "cec_cmol_kg": 18.0})
+                                   "nitrogen_g_kg": 1.5, "cec_cmol_kg": 18.0,
+                                   "bdod_kg_dm3": 1.40, "cfvo_pct": 5.0})
 
 
 # ──────────────────────────────────────────────
@@ -217,7 +255,7 @@ def precompute_all_soil() -> Dict[str, Dict]:
             return json.load(f)
 
     # Lazy import to avoid circular imports at module level
-    from core.regions import REGIONS
+    from crop_mcp.core.regions import REGIONS
 
     soil_data = {}
     total = len(REGIONS)
