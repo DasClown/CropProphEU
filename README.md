@@ -1,6 +1,6 @@
 # 🌾 crop-mcp
 
-[![Smithery](https://smithery.ai/badge/@crop-mcp/CropProphEU)](https://smithery.ai/servers/crop-mcp/CropProphEU)
+[![Smithery](https://smithery.ai/badge/DasClown/CropProphEU)](https://smithery.ai/servers/DasClown/CropProphEU)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/DasClown/CropProphEU?style=flat)](https://github.com/DasClown/CropProphEU/stargazers)
@@ -11,7 +11,7 @@ Get AI agents to answer: *"How will wheat perform in Baden-Württemberg this yea
 
 ```bash
 pip install git+https://github.com/DasClown/CropProphEU.git
-# or try it on Smithery: https://smithery.ai/servers/crop-mcp/CropProphEU
+# or try it on Smithery: https://smithery.ai/servers/DasClown/CropProphEU
 ```
 
 ---

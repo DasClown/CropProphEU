@@ -12,7 +12,7 @@ NDVI = (NIR - Red) / (NIR + Red)
 import json
 import time
 from datetime import date, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from urllib.request import Request, urlopen
 
 import rasterio
