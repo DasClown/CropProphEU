@@ -21,7 +21,7 @@
 | Mais | 0.920 (11.6%) | **0.918 (11.6%)** | -0.2% | 0.719 |
 | Gerste | 0.540 (11.3%) | **0.534 (11.2%)** | **-1.1%** ✅ | 0.856 |
 
-**Neue Top-Features**: coarse_pct → #1 Gerste, #2 Weizen; AWC → #2 Mais, #4 Gerste; bdod → #9 Weizen
+**Neue Top-Features**: coarse_pct → #1 Gerste (0.238), #2 Weizen; AWC → #2 Mais, #4 Gerste; cfvo → Weizen #3 (0.143)
 
 ## 2026-05-04 — V4.7
 - **Bulk Density (bdod)**: aus SoilGrids v2 API → `bdod_kg_dm3` in jedem Soil-Profil
