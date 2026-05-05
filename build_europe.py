@@ -36,14 +36,14 @@ country_yields = {}
 # C1100 = Common wheat + spelt → wheat
 # C1300 = Barley
 # C1500 = Grain maize → corn
-# C2000 = Rapeseed → verified for: FR, RO, HU, ES, IT, BG, PT, EL
-# C2200 = Sunflower seed → verified for: FR, RO, HU, ES, IT, BG, PT, EL
+# I1110 = Rape and turnip rape seeds (wir haben hier fälschlich C2000 = Rice verwendet!)
+# I1120 = Sunflower seed (C2200 = Rice Japonica — falscher Code!)
 EUROSTAT_CROP_CODES = {
     "wheat": "C1100",
     "barley": "C1300",
     "corn": "C1500",
     "rapeseed": "I1110",
-    "sunflower": "C2200",
+    "sunflower": "I1120",
 }
 
 # Crop-specific country lists (only countries with verified Eurostat yield data)
