@@ -1,5 +1,35 @@
 # Changelog — CropProphEU
 
+## 2026-05-05 — V5.1 (Data Integrity Fix)
+
+### 🚨 Befund & Fix
+- **Soil = Defaults**: Alle Trainingsdaten (wheat, barley, corn) hatten SOC=15.0 — 100% Default-Werte. **Fix**: Soil Cache auf 120 Regionen erweitert, 5.405 Samples mit echten SoilGrids v2-Daten gepatcht
+- **UK/UA Wetter = 0**: 324 Samples (44 UK barley + 40 UK corn + 120 UA wheat + 120 UA sunflower) hatten GDD=0, Precip=0 durch falschen NASA POWER Key. **Fix**: Korrekte Key-Formatierung (YYYYMM statt Monatsnummer)
+- **UA Erträge unverifiziert**: FAOSTAT-Daten waren hartcodiert ohne Quellen. **Fix**: Gegen USDA FAS + World Bank verifiziert, Quellen dokumentiert
+
+### Model Performance (V5.1 — retrained with real data)
+
+| Crop | Samples | Länder | LOYO MAE | R² (LOYO) | Real Soil |
+|------|:-------:|:------:|:--------:|:---------:|:---------:|
+| 🌾 Barley | 1.885 | 26 | **0.538 (11.2%)** | 0.851 | 97% |
+| 🌽 Corn | 1.797 | 21 | **0.922 (11.6%)** | 0.718 | 97% |
+| 🌾 Wheat | 1.603 | 26 | **0.599 (11.5%)** | 0.871 | 97% |
+| 🌻 Rapeseed | 717 | 8 | **0.724 (13.4%)** | 0.539 | 97% |
+| 🌻 Sunflower | 764 | 9 | **0.586 (11.9%)** | 0.749 | 97% |
+
+### Changed
+- `soil_cache.json`: Erweitert von 108 → 120 Regionen (UK + UA)
+- `crop_mcp/sources/faostat.py`: Quellen dokumentiert, Daten gegen USDA FAS + World Bank verifiziert
+- Alle `europe_training_data_*.json`: Soil-Patch + Weather-Rebuild
+- Alle `europe_yield_model_*.pkl`: Retrained mit echten Daten
+
+### Technical Notes
+- **Vor Fix**: Nur Raps + Sonnenblume hatten echte Bodendaten (V4.9-Build)
+- **Nach Fix**: 97% Soil-Coverage in ALLEN 5 Modellen
+- **Restliche 3% Defaults**: Sehr kleine NUTS2-Regionen ohne SoilGrids-Daten (Inseln, Stadtstaaten)
+- **Entscheidungsreife**: LOL-Score 7.5/10 — finanzielle Entscheidungen mit 15-20% Risikopuffer vertretbar
+- Version: 5.0.0 → 5.1.0
+
 ## 2026-05-05 — V5.0 (UK + Ukraine Expansion)
 
 ### Added
@@ -28,6 +58,8 @@
 - Ukraine Datenquelle: FAOSTAT-kompilierte Referenzdaten (wheat + sunflower, 14yr)
 - Soil-Features für UK/UA: Regionale Defaults (SoilGrids-Suche bei Bedarf)
 - Ukraine sunflower: 2,16 t/ha ⌀ — weltweit #1 Produzent, moderate Erträge
+
+## 2026-05-04 — V4.9 (Raps + Sonnenblumen)
 
 ### Added
 - **2 neue Kulturen**: Raps (rapeseed) + Sonnenblumen (sunflower) — datengetrieben
@@ -98,7 +130,7 @@
 - `/.well-known/mcp/server-card.json` Endpoint (10 Tools)
 - `start_http.py` und `start_https.py` Wrapper-Skripte
 - Automatischer Health-Check Cron-Job (alle 2 Tage)
-- Telegram Bot für Crop + Drug Intelligence (/home/j/bots/telegram_bot.py)
+- Telegram Bot for Crop + Drug Intelligence (/home/j/bots/telegram_bot.py)
 - Optimierungs-Cron (wöchentlich): Data-Source-Scan + Verbesserungsvorschläge
 
 ### Fixed
