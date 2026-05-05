@@ -1194,6 +1194,26 @@ class CompareRegionsInput(BaseModel):
     language: str | None = Field(default=None, description="Output language: 'de' or 'en'")
 
 
+class PortfolioOptimizerInput(BaseModel):
+    """Optimize a crop investment portfolio across EU regions."""
+    budget_eur: float = Field(default=100000, description="Total budget in EUR for investment")
+    risk_tolerance: str = Field(default="moderate", pattern=r"^(conservative|moderate|aggressive)$",
+                                description="Risk tolerance: conservative (stable regions/crops), moderate (balanced), aggressive (high-ROI)")
+    regions: str | None = Field(default=None, description="Optional NUTS2 filter (comma-separated). Default: top 15 regions.")
+    crops: str | None = Field(default=None, description="Optional crop filter (comma-separated). Default: all crops.")
+    year: int = Field(default=2026, description="Target year")
+    language: str | None = Field(default=None, description="Output language")
+
+
+_PROD_COSTS = {
+    "wheat": {"avg": 650, "min": 500, "max": 800},
+    "barley": {"avg": 600, "min": 450, "max": 750},
+    "corn": {"avg": 700, "min": 550, "max": 850},
+    "rapeseed": {"avg": 780, "min": 600, "max": 950},
+    "sunflower": {"avg": 650, "min": 500, "max": 800},
+}
+
+
 def _handle_yield_and_value(**kwargs: Any) -> list[types.TextContent]:
     v = YieldAndValueInput(**kwargs)
     if not _HAS_EUROPE_MODEL:
@@ -1363,6 +1383,127 @@ def _handle_compare_regions(**kwargs: Any) -> list[types.TextContent]:
     }, indent=2))]
 
 
+def _handle_portfolio_optimizer(**kwargs: Any) -> list[types.TextContent]:
+    """Optimize a crop investment portfolio — pure AI-for-AI decision support."""
+    v = PortfolioOptimizerInput(**kwargs)
+    
+    # Determine regions and crops to scan
+    try:
+        from .core.regions import REGIONS
+        all_region_codes = list(REGIONS.keys())
+    except ImportError:
+        all_region_codes = ["DEE0","DEF0","UKH1","NL11","FRB0","RO11","DK01","DE80","PL12"]
+    
+    all_crops = ["wheat", "barley", "corn", "rapeseed", "sunflower"]
+    
+    region_list = [r.strip().upper() for r in v.regions.split(",") if r.strip()] if v.regions else all_region_codes[:15]
+    crop_list = [c.strip().lower() for c in v.crops.split(",") if c.strip()] if v.crops else all_crops
+    region_list = region_list[:15]  # performance cap
+    
+    # Get predictions via compare_regions
+    try:
+        res = _handle_compare_regions(regions=",".join(region_list), crops=",".join(crop_list), year=v.year)
+        data = json.loads(res[0].text)
+        predictions = data.get("results", [])
+    except Exception as e:
+        return [types.TextContent(type="text", text=json.dumps({"status":"error","message":str(e)[:200]}))]
+    
+    if not predictions:
+        return [types.TextContent(type="text", text=json.dumps({"status":"error","message":"No predictions."}))]
+    
+    # Calculate profitability
+    opportunities = []
+    for p in predictions:
+        crop = p["crop"]
+        yield_t_ha = p["predicted_yield_t_ha"]
+        revenue = p.get("market_value_eur_per_ha", 0) or 0
+        costs = _PROD_COSTS.get(crop, {"avg": 700})
+        cost = costs["avg"]
+        margin = revenue - cost
+        roi_pct = round((margin / cost) * 100, 1) if cost > 0 else 0
+        
+        mae = p.get("mae_pct", 15)
+        n_samples = p.get("n_training_samples", 0)
+        ndvi = p.get("ndvi_correction_applied", False)
+        risk_base = mae * 5
+        sample_bonus = max(0, (1000 - n_samples) / 20) if n_samples < 1000 else 0
+        ndvi_bonus = 5 if ndvi else 0
+        risk_score = min(100, risk_base + sample_bonus - ndvi_bonus)
+        
+        risk_factor = {"conservative": 0.8, "moderate": 1.0, "aggressive": 1.3}.get(v.risk_tolerance, 1.0)
+        risk_adjusted_margin = margin * (1 - (risk_score / 100) * (0.5 / risk_factor))
+        
+        opportunities.append({
+            "region": p["region"], "region_name": p.get("region_name",""), "country": p.get("country",""),
+            "crop": crop, "yield_t_ha": round(yield_t_ha, 2),
+            "price_eur_t": p.get("price_eur_per_t", 0) or 0,
+            "revenue_eur_ha": round(revenue), "cost_eur_ha": cost,
+            "margin_eur_ha": round(margin), "roi_pct": roi_pct,
+            "risk_score": round(risk_score, 1),
+            "risk_adjusted_margin": round(risk_adjusted_margin, 0),
+            "ndvi_corrected": ndvi, "n_training_samples": n_samples,
+        })
+    
+    # Filter by risk tolerance
+    if v.risk_tolerance == "conservative":
+        opportunities = [o for o in opportunities if o["risk_score"] < 50 and o["margin_eur_ha"] > 0]
+    elif v.risk_tolerance == "moderate":
+        opportunities = [o for o in opportunities if o["margin_eur_ha"] > -100]
+    
+    opportunities.sort(key=lambda x: x["risk_adjusted_margin"], reverse=True)
+    
+    # Build allocation
+    remaining = v.budget_eur
+    allocation = []
+    total_margin = 0
+    total_ha = 0
+    max_pos = {"conservative": 3, "moderate": 5, "aggressive": 7}.get(v.risk_tolerance, 5)
+    
+    for opp in opportunities[:max_pos]:
+        if remaining <= 0:
+            break
+        ha = max(1, int(remaining * 0.2 / opp["cost_eur_ha"])) if opp["cost_eur_ha"] > 0 else 1
+        inv = ha * opp["cost_eur_ha"]
+        if inv > remaining:
+            ha = max(1, int(remaining / opp["cost_eur_ha"]))
+            inv = ha * opp["cost_eur_ha"]
+        allocation.append({
+            "region": opp["region"], "region_name": opp["region_name"], "country": opp["country"],
+            "crop": opp["crop"], "hectares": ha, "cost_eur": inv,
+            "expected_margin_eur": round(ha * opp["margin_eur_ha"]),
+            "roi_pct": opp["roi_pct"], "risk_score": opp["risk_score"],
+        })
+        remaining -= inv
+        total_margin += ha * opp["margin_eur_ha"]
+        total_ha += ha
+    
+    invested = v.budget_eur - remaining
+    portfolio_roi = round((total_margin / invested) * 100, 1) if invested > 0 else 0
+    
+    return [types.TextContent(type="text", text=json.dumps({
+        "status": "ok",
+        "portfolio": {
+            "total_budget_eur": round(v.budget_eur),
+            "total_invested_eur": round(invested),
+            "remaining_budget_eur": round(remaining),
+            "total_hectares": total_ha,
+            "expected_total_margin_eur": round(total_margin),
+            "portfolio_roi_pct": portfolio_roi,
+            "risk_tolerance": v.risk_tolerance,
+        },
+        "allocation": allocation,
+        "top_opportunities": [{
+            "rank": i+1, "region": o["region"], "region_name": o["region_name"],
+            "country": o["country"], "crop": o["crop"],
+            "margin_eur_ha": o["margin_eur_ha"],
+            "risk_adjusted_margin": o["risk_adjusted_margin"],
+            "roi_pct": o["roi_pct"], "risk_score": o["risk_score"],
+        } for i, o in enumerate(opportunities[:10])],
+        "parameters": {"budget_eur": v.budget_eur, "risk_tolerance": v.risk_tolerance, "year": v.year},
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }, indent=2))]
+
+
 def _handle_list_regions(**kwargs: Any) -> list[types.TextContent]:
     """List available regions, optionally filtered by country."""
     validated = ListRegionsInput(**kwargs)
@@ -1524,6 +1665,18 @@ TOOLS = {
             "Example: compare_regions(regions='DEE0,FR10,HU10', crops='wheat,corn')"
         ),
         "input_schema": CompareRegionsInput.model_json_schema(),
+    },
+    "portfolio_optimizer": {
+        "handler": _handle_portfolio_optimizer,
+        "description": (
+            "Optimal EU crop investment allocation. "
+            "Given a budget and risk tolerance, returns a diversified portfolio "
+            "across regions and crops. Uses live market prices, NDVI correction, "
+            "and model confidence scores for risk-adjusted optimization. "
+            "Pure AI-for-AI decision support. "
+            "Example: portfolio_optimizer(budget_eur=500000, risk_tolerance='moderate')"
+        ),
+        "input_schema": PortfolioOptimizerInput.model_json_schema(),
     },
 }
 
