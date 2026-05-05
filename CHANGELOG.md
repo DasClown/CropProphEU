@@ -1,5 +1,102 @@
 # Changelog — CropProphEU
 
+## 2026-05-05 — V5.2 (Visibility Release 🚀)
+
+### Added
+- **README komplett überarbeitet** — V5.2 Features, alle 12 Tools, 5 Crops, live prices, NDVI correction, portfolio optimizer
+- **GitHub Release v5.2.0** — mit Release Notes
+
+### Changed
+- `README.md`: Vollständige Neufassung — Raps/Sonnenblumen korrigiert (I1110/I1120), compare_regions, portfolio_optimizer, NDVI correction, live prices
+- Version: 5.1.0 → 5.2.0
+
+### Fixed
+- `crop_mcp/__init__.py`: Version 4.7.0 → 5.2.0 (war 4 Versionen zurück — desync fix)
+
+---
+
+## 2026-05-05 — V5.1e (Portfolio Optimizer)
+
+### Added
+- **`portfolio_optimizer` Tool** — AI-for-AI investment engine
+  - `portfolio_optimizer(budget_eur, risk_tolerance, regions?, crops?, year?)`
+  - Optimiert Allokation über Regionen×Kulturen mittels Brute-Force (max 100 Kombos)
+  - Gibt ranking mit Fläche, Marge, ROI, Risikostufe zurück
+  - Budgetaufteilung: Weizen dominiert (hohe Marge, niedriges Risiko)
+- `crop_mcp/tools/portfolio_optimizer.py` — vollständige Implementierung
+- Wiki-Seite: `portfolio-optimizer-tool`
+
+### Changed
+- `server.py`: Tool #12 registriert — `portfolio_optimizer`
+- Sunflower-Modell retrained (1,229 Samples, 17 Länder, MAE 16.1%)
+- Version: 5.1.0 → 5.1.1
+
+---
+
+## 2026-05-05 — V5.1d 🔴 (Eurostat Crop Code Fix — Rapeseed & Sunflower)
+
+### 🔴 CRITICAL FIX — Silent Data Corruption
+
+**Befund**: Rapeseed und Sunflower wurden mit Rice-Daten trainiert:
+- Rapeseed (C2000) = **Paddy Rice**, nicht Raps!
+- Sunflower (C2200) = **Rice Japonica**, nicht Sonnenblumen!
+
+**Fix**:
+- Rapeseed → **I1110** (Rape/turnip rape seeds) — Industrial crop code
+- Sunflower → **I1120** (Sunflower seed) — Industrial crop code
+- Länder erweitert: Rapeseed von 8→25 Länder (DE, UK, NL, PL, DK jetzt real)
+- Sunflower von 8→17 Länder (DE, AT, CZ, HR, HU, IT, PL, RO, SK, BG, NL, PT, UA)
+
+### Model Performance (post-fix)
+
+| Crop | Samples | Länder | LOYO MAE | R² | Top Feature |
+|------|:-------:|:------:|:--------:|:--:|:-----------:|
+| Rapeseed | **1,825** | **25** | **0.340 (10.8%)** | 0.827 | coarse_pct (28%) |
+| Sunflower | **1,229** | **17** | **0.326 (16.1%)** | 0.742 | silt_pct (24%) |
+
+**Critical impact**: DEE0 Rapeseed prediction fiel von 7.21 t/ha (Rice-Daten) auf 2.63 t/ha (reale EU-Daten). Alle vorherigen Rapeseed-Prognosen waren wertlos.
+
+### Technical
+- `Eurostat`: Prefix-Suche implementiert (C=Cereals, I=Industrial, R=Root crops)
+- SIEC-Klassifikation dokumentiert
+- Wiki-Seite: `rapeseed-data-fix`
+- Version: 5.1.0 → 5.1.1
+
+---
+
+## 2026-05-05 — V5.1c (Live Prices in compare_regions + Monthly Outlook)
+
+### Added
+- **`price_eur_per_t`** in `compare_regions` Output — live CBOT/MATIF Futures pro Region×Crop
+- **Monthly Outlook Cron-Job**: `crop-propheu-monthly-outlook` (2. jeden Monats, 06:00 UTC)
+- `scripts/monthly_outlook.py` — automatische Finanzanalyse mit Live-Preisen, historischem Vergleich, Portfolio-Empfehlung
+
+### Changed
+- `REFERENCE_PRICES` aktualisiert: Mais 205→**189**€/t, Weizen 235→**239**€/t (Δ zum Live = 0)
+- `compare_regions`: Summary zeigt jetzt `1780€/ha @ 189€/t` statt nur `1780€/ha`
+- Version: 5.1.0 → 5.1.1
+
+---
+
+## 2026-05-05 — V5.1b (NDVI Correction + compare_regions)
+
+### Added
+- **NDVI Satellite Correction**: `crop_mcp/ndvi_correction.py`
+  - Sentinel-2 NDVI via Copernicus STAC → multiplikativer Faktor (±30% max)
+  - Pro-Kultur Sensitivity: Wheat 0.25, Corn 0.22, Barley 0.20, Rapeseed 0.18, Sunflower 0.18
+  - Graceful degradation bei fehlenden Daten (cloud cover, API-Error)
+- **`compare_regions` Tool**: `compare_regions(regions, crops, year?)`
+  - Batch-Vergleich von bis zu 20 Regionen × 5 Kulturen
+  - Sortiertes Ergebnis mit Yield, Risk Range (P10/P90), Market Value (€/ha), NDVI-Status
+- Wiki-Seiten: `crop-propheu-2026-financial-decision`
+
+### Changed
+- `europe_model_api.py`: NDVI-Korrektur in Vorhersage-Pipeline integriert
+- `soil_cache.json`: 108→120 Regionen (UK+UA via SoilGrids v2 API)
+- Version: 5.0.0 → 5.1.0
+
+---
+
 ## 2026-05-05 — V5.1 (Data Integrity Fix)
 
 ### 🚨 Befund & Fix
