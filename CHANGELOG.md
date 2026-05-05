@@ -1,6 +1,33 @@
 # Changelog — CropProphEU
 
-## 2026-05-04 — V4.9
+## 2026-05-05 — V5.0 (UK + Ukraine Expansion)
+
+### Added
+- **🇬🇧 UK Coverage**: Barley + Corn Modelle mit UK-Daten neu trainiert
+- **🇺🇦 Ukraine Coverage**: Wheat + Sunflower Modelle mit FAOSTAT-kompilierten Daten (via NASA POWER + Soil-Defaults)
+- `build_v5.py`: UK + Ukraine Batch-Builder
+- `crop_mcp/sources/faostat.py`: FAOSTAT Fetcher (mit kompilierten Referenzdaten als Fallback)
+
+### Model Performance (V5.0)
+
+| Crop | Samples | Länder | Neu | LOYO MAE |
+|------|:-------:|:------:|:---:|:--------:|
+| 🌾 Barley | **1.885** | 26 | UK: 44 (⌀ 6,00 t/ha) | **0,540 (11,2%)** |
+| 🌽 Corn | **1.797** | 21 | UK: 40 (⌀ 5,05 t/ha) | **0,919 (11,6%)** |
+| 🌾 Wheat | **1.603** | 26 | UA: 120 (⌀ 3,93 t/ha) | **0,585 (11,2%)** |
+| 🌻 Sunflower | **764** | 9 | UA: 120 (⌀ 2,16 t/ha) | **0,578 (11,7%)** |
+
+### Changed
+- `build_europe.py`: CROP_COUNTRIES expanded — UK für barley+corn, UA für wheat+sunflower
+- `europe_model_api.py`: Fallback baseline um min/max erweitert (KeyError-Fix)
+- Training Data Paths: Alle Modelle jetzt mit UK/UA Daten
+- Version: 4.9.0 → 5.0.0
+
+### Technical Notes
+- UK Datenquelle: Eurostat (barley 2010–2020, 11yr; corn 2011–2020, 10yr)
+- Ukraine Datenquelle: FAOSTAT-kompilierte Referenzdaten (wheat + sunflower, 14yr)
+- Soil-Features für UK/UA: Regionale Defaults (SoilGrids-Suche bei Bedarf)
+- Ukraine sunflower: 2,16 t/ha ⌀ — weltweit #1 Produzent, moderate Erträge
 
 ### Added
 - **2 neue Kulturen**: Raps (rapeseed) + Sonnenblumen (sunflower) — datengetrieben

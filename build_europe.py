@@ -48,11 +48,11 @@ EUROSTAT_CROP_CODES = {
 
 # Crop-specific country lists (only countries with verified Eurostat yield data)
 CROP_COUNTRIES = {
-    "wheat": COUNTRIES,
-    "barley": COUNTRIES,
-    "corn": COUNTRIES,
+    "wheat": COUNTRIES + ["UA"],
+    "barley": COUNTRIES + ["UK"],
+    "corn": COUNTRIES + ["UK"],
     "rapeseed": ["FR", "RO", "HU", "ES", "IT", "BG", "PT", "EL"],
-    "sunflower": ["FR", "RO", "HU", "ES", "IT", "BG", "PT", "EL"],
+    "sunflower": ["FR", "RO", "HU", "ES", "IT", "BG", "PT", "EL"] + ["UA"],
 }
 
 DAYS_IN_MONTH = {1:31,2:28,3:31,4:30,5:31,6:30,7:31,8:31,9:30,10:31,11:30,12:31}
