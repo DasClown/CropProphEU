@@ -67,6 +67,13 @@ try:
 except Exception:
     _HAS_NDVI = False
 
+# NDVI Correction (adjusts model predictions with satellite data)
+try:
+    from .ndvi_correction import compute_ndvi_correction as _ndvi_correct
+    _HAS_NDVI_CORRECTION = True
+except Exception:
+    _HAS_NDVI_CORRECTION = False
+
 _start_time = time.time()
 
 # Server-level language setting (from config or CLI)
@@ -85,6 +92,59 @@ def _detect_language(kwargs: dict) -> str:
     if lang not in ("de", "en"):
         lang = _DEFAULT_LANGUAGE
     return lang
+
+# ─────────────────────────────────────────────────────────────
+# NDVI Correction for Predictions
+# ─────────────────────────────────────────────────────────────
+
+def _apply_ndvi_correction(result: dict, region_code: str, lat: float, lon: float, crop: str) -> dict:
+    """Apply NDVI correction to a prediction result (mutates in-place)."""
+    if not _HAS_NDVI_CORRECTION or not _HAS_NDVI:
+        result["ndvi_correction"] = {"applied": False, "reason": "ndvi_module_unavailable"}
+        return result
+    
+    model_yield = result.get("predicted_yield_t_ha", result.get("yield_t_ha"))
+    if model_yield is None:
+        return result
+    
+    # Import here to avoid circular issues
+    from .sources import ndvi as _ndvi_mod
+    
+    correction = _ndvi_correct(
+        model_prediction=model_yield,
+        region_code=region_code,
+        lat=lat,
+        lon=lon,
+        crop=crop,
+        ndvi_module=_ndvi_mod,
+    )
+    
+    if correction.get("note") == "ok":
+        result["predicted_yield_t_ha"] = correction["corrected_yield_t_ha"]
+        result["model_yield_before_ndvi"] = correction["model_yield_t_ha"]
+        result["ndvi_correction"] = {
+            "applied": True,
+            "factor": correction["correction_factor"],
+            "ndvi_current": correction["ndvi"]["current"],
+            "ndvi_expected": correction["ndvi"]["expected"],
+            "ndvi_anomaly": correction["ndvi"]["anomaly"],
+            "sensitivity": correction["sensitivity"],
+            "satellite_date": correction["ndvi"]["date"],
+        }
+        # Also update risk range proportionally
+        for key in ["p10", "p50", "p90", "min", "max"]:
+            if key in result:
+                result[key] = round(result[key] * correction["correction_factor"], 3)
+        # Regenerate risk range
+        if "p10" in result and "p90" in result:
+            result["risk_range_t_ha"] = round(result["p90"] - result["p10"], 2)
+    else:
+        result["ndvi_correction"] = {
+            "applied": False,
+            "reason": correction.get("note", "unknown"),
+        }
+    
+    return result
 
 def _describe_gdd_en(gdd: float, crop: str) -> str:
     norms = {"wheat": (1800, 2800), "corn": (2200, 3200), "barley": (1500, 2500)}
@@ -830,6 +890,12 @@ def _handle_europe_yield_forecast(**kwargs: Any) -> list[types.TextContent]:
         "soil_moisture": round(soil_m, 3),
     }
     
+    # V5.1: NDVI satellite correction (adjusts prediction in-place)
+    try:
+        _apply_ndvi_correction(result, validated.region, region.latitude, region.longitude, validated.crop)
+    except Exception:
+        result["ndvi_correction"] = {"applied": False, "reason": "exception_during_correction"}
+    
     return [types.TextContent(type="text", text=json.dumps({
         "status": "ok",
         "data": result,
@@ -1121,6 +1187,13 @@ class YieldAndValueInput(BaseModel):
     language: str | None = Field(default=None, description="Output language: 'de' (German, default) or 'en' (English). Auto-detected if omitted.")
 
 
+class CompareRegionsInput(BaseModel):
+    regions: str = Field(..., description="Comma-separated NUTS2 codes (e.g. 'DEE0,FR10,PL22'). Minimum 2. Max 20.")
+    crops: str = Field(..., description="Comma-separated crop names (e.g. 'wheat,corn,barley'). Options: wheat, corn, barley, rapeseed, sunflower.")
+    year: int = Field(default=2025, description="Target year for predictions")
+    language: str | None = Field(default=None, description="Output language: 'de' or 'en'")
+
+
 def _handle_yield_and_value(**kwargs: Any) -> list[types.TextContent]:
     v = YieldAndValueInput(**kwargs)
     if not _HAS_EUROPE_MODEL:
@@ -1149,6 +1222,15 @@ def _handle_yield_and_value(**kwargs: Any) -> list[types.TextContent]:
     r["country"] = cnt
     r["crop"] = v.crop
 
+    # V5.1: NDVI satellite correction (adjusts prediction in-place)
+    try:
+        _apply_ndvi_correction(r, v.region, reg.latitude, reg.longitude, v.crop)
+        # Recalculate market value with corrected yield
+        if _HAS_MARKET_PRICES and r.get("ndvi_correction", {}).get("applied"):
+            r["market_value"] = calculate_revenue(r.get("predicted_yield_t_ha", 0), v.crop)
+    except Exception:
+        r["ndvi_correction"] = {"applied": False, "reason": "exception_during_correction"}
+
     # V4.7: Frost outlook for yield_and_value
     try:
         fc = get_forecast(reg.latitude, reg.longitude, reg.altitude)
@@ -1170,6 +1252,111 @@ def _handle_yield_and_value(**kwargs: Any) -> list[types.TextContent]:
         "status":"ok", "data":r, "summary":summary, "language":lang,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }))]
+
+
+def _handle_compare_regions(**kwargs: Any) -> list[types.TextContent]:
+    """Compare multiple regions × crops — find the best combination."""
+    v = CompareRegionsInput(**kwargs)
+    if not _HAS_EUROPE_MODEL:
+        return [types.TextContent(type="text", text=json.dumps({"status":"error","message":"Model not loaded."}))]
+    
+    region_list = [r.strip().upper() for r in v.regions.split(",") if r.strip()]
+    crop_list = [c.strip().lower() for c in v.crops.split(",") if c.strip()]
+    
+    if len(region_list) < 2:
+        return [types.TextContent(type="text", text=json.dumps({"status":"error","message":"At least 2 regions required."}))]
+    if len(region_list) > 20:
+        return [types.TextContent(type="text", text=json.dumps({"status":"error","message":"Max 20 regions."}))]
+    
+    results = []
+    errors = []
+    
+    for region_code in region_list:
+        try:
+            reg = get_region(region_code)
+            country = reg.country
+        except KeyError:
+            errors.append({"region": region_code, "error": "unknown_region"})
+            continue
+        
+        for crop in crop_list:
+            try:
+                # Default weather parameters for the target year
+                gdd = 1400 if crop in ("wheat", "barley") else 1600 if crop == "corn" else 1200
+                precip = 350
+                
+                r = predict_europe_yield(region_code, country, crop=crop,
+                                         gdd=gdd, precip_mm=precip)
+                
+                y = r.get("predicted_yield_t_ha", 0)
+                p10 = r.get("p10", y * 0.8)
+                p90 = r.get("p90", y * 1.2)
+                baseline = r.get("model_info", {}).get("baseline_yield_t_ha", y)
+                mae_pct = r.get("model_info", {}).get("cv_mae_pct", 15)
+                samples = r.get("model_info", {}).get("n_samples", 0)
+                
+                # Try NDVI correction
+                try:
+                    reg_obj = get_region(region_code)
+                    _apply_ndvi_correction(r, region_code, reg_obj.latitude, reg_obj.longitude, crop)
+                    y_corrected = r.get("predicted_yield_t_ha", y)
+                    ndvi_info = r.get("ndvi_correction", {})
+                except Exception:
+                    y_corrected = y
+                    ndvi_info = {"applied": False}
+                
+                # Market value — calculate_revenue returns a dict
+                market_val = None
+                if _HAS_MARKET_PRICES:
+                    try:
+                        from .market_prices import calculate_revenue as _calc_rev
+                        _rev = _calc_rev(y_corrected, crop)
+                        if isinstance(_rev, dict):
+                            market_val = _rev.get("revenue_eur_per_ha")
+                    except Exception:
+                        pass
+                
+                results.append({
+                    "region": region_code,
+                    "region_name": reg_obj.name if 'reg_obj' in dir() else reg.name,
+                    "country": country,
+                    "crop": crop,
+                    "predicted_yield_t_ha": round(y_corrected, 3),
+                    "risk_range_t_ha": [round(p10, 3), round(p90, 3)],
+                    "baseline_t_ha": round(baseline, 3),
+                    "mae_pct": mae_pct,
+                    "n_training_samples": samples,
+                    "market_value_eur_per_ha": market_val,
+                    "ndvi_correction_applied": ndvi_info.get("applied", False),
+                })
+            except Exception as e:
+                errors.append({"region": region_code, "crop": crop, "error": str(e)[:100]})
+    
+    # Sort by yield descending
+    results.sort(key=lambda x: x["predicted_yield_t_ha"], reverse=True)
+    
+    lang = v.language or _DEFAULT_LANGUAGE
+    summary_parts = []
+    if results:
+        best = results[0]
+        summary_parts.append(f"Best: {best['crop']} in {best['region']} ({best['region_name']}) — {best['predicted_yield_t_ha']:.2f} t/ha" +
+                            (f" — {best['market_value_eur_per_ha']:.0f}€/ha" if best['market_value_eur_per_ha'] else ""))
+        if len(results) > 1:
+            worst = results[-1]
+            summary_parts.append(f"Worst: {worst['crop']} in {worst['region']} ({worst['region_name']}) — {worst['predicted_yield_t_ha']:.2f} t/ha")
+    
+    return [types.TextContent(type="text", text=json.dumps({
+        "status": "ok",
+        "results": results,
+        "errors": errors,
+        "summary": "; ".join(summary_parts),
+        "parameters": {
+            "regions": region_list,
+            "crops": crop_list,
+            "year": v.year,
+        },
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }, indent=2))]
 
 
 def _handle_list_regions(**kwargs: Any) -> list[types.TextContent]:
@@ -1322,6 +1509,17 @@ TOOLS = {
             "Verified crops: wheat, corn, barley, rapeseed, sunflower."
         ),
         "input_schema": YieldAndValueInput.model_json_schema(),
+    },
+    "compare_regions": {
+        "handler": _handle_compare_regions,
+        "description": (
+            "Compare crop yields across multiple EU regions in a single call. "
+            "Input comma-separated NUTS2 region codes and crop names. "
+            "Returns a sorted table of predicted yields, risk ranges, and market values. "
+            "Use this to find the best region×crop combination for investment decisions. "
+            "Example: compare_regions(regions='DEE0,FR10,HU10', crops='wheat,corn')"
+        ),
+        "input_schema": CompareRegionsInput.model_json_schema(),
     },
 }
 
