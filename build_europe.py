@@ -42,7 +42,7 @@ EUROSTAT_CROP_CODES = {
     "wheat": "C1100",
     "barley": "C1300",
     "corn": "C1500",
-    "rapeseed": "C2000",
+    "rapeseed": "I1110",
     "sunflower": "C2200",
 }
 
@@ -51,7 +51,7 @@ CROP_COUNTRIES = {
     "wheat": COUNTRIES + ["UA"],
     "barley": COUNTRIES + ["UK"],
     "corn": COUNTRIES + ["UK"],
-    "rapeseed": ["FR", "RO", "HU", "ES", "IT", "BG", "PT", "EL"],
+    "rapeseed": COUNTRIES + ["UK"],
     "sunflower": ["FR", "RO", "HU", "ES", "IT", "BG", "PT", "EL"] + ["UA"],
 }
 
