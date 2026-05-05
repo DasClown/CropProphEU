@@ -38,20 +38,20 @@ MATIF_PREMIUM = {
 # Reference prices (static fallback)
 REFERENCE_PRICES = {
     "wheat": {
-        "price_eur_per_t": 235,
+        "price_eur_per_t": 239,
         "market": "Euronext MATIF (Paris)",
         "contract": "EBM Z2026 (Dec 2026)",
         "source": "Referenzpreis — MATIF Paris / CBOT Chicago (yfinance)",
         "note": "Brotweizen (mahlfähig), frei Erste-Handelskette",
-        "updated": "2026-05-01",
+        "updated": "2026-05-05",
     },
     "corn": {
-        "price_eur_per_t": 205,
+        "price_eur_per_t": 189,
         "market": "Euronext MATIF (Paris)",
         "contract": "EMA Z2026 (Nov 2026)",
         "source": "Referenzpreis — MATIF Paris / CBOT Chicago (yfinance)",
-        "note": "Körnermais, frei Handelsstufe",
-        "updated": "2026-05-01",
+        "note": "Körnermais, frei Handelsstufe — MARKT GEFALLEN (CBOT Mai 2026)",
+        "updated": "2026-05-05",
     },
     "barley": {
         "price_eur_per_t": 190,
@@ -59,7 +59,7 @@ REFERENCE_PRICES = {
         "contract": "Futtergerste, frei Hof",
         "source": "AMI / Landwirtschaftskammern",
         "note": "Kein Future-Markt — regionale Erfassungspreise",
-        "updated": "2026-05-01",
+        "updated": "2026-05-05",
     },
     "rapeseed": {
         "price_eur_per_t": 470,
@@ -67,7 +67,7 @@ REFERENCE_PRICES = {
         "contract": "ECO (Rapeseed Futures)",
         "source": "Referenzpreis — MATIF Paris (yfinance)",
         "note": "Winterraps, frei Ölmühle",
-        "updated": "2026-05-04",
+        "updated": "2026-05-05",
     },
     "sunflower": {
         "price_eur_per_t": 420,
@@ -75,7 +75,7 @@ REFERENCE_PRICES = {
         "contract": "Sunflower seed (Black Sea reference)",
         "source": "Black Sea / Argus Media reference",
         "note": "Sonnenblumenkerne, frei Ölmühle",
-        "updated": "2026-05-04",
+        "updated": "2026-05-05",
     },
 }
 

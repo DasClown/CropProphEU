@@ -1307,12 +1307,14 @@ def _handle_compare_regions(**kwargs: Any) -> list[types.TextContent]:
                 
                 # Market value — calculate_revenue returns a dict
                 market_val = None
+                market_price = None
                 if _HAS_MARKET_PRICES:
                     try:
                         from .market_prices import calculate_revenue as _calc_rev
                         _rev = _calc_rev(y_corrected, crop)
                         if isinstance(_rev, dict):
                             market_val = _rev.get("revenue_eur_per_ha")
+                            market_price = _rev.get("price_eur_per_t")
                     except Exception:
                         pass
                 
@@ -1327,6 +1329,7 @@ def _handle_compare_regions(**kwargs: Any) -> list[types.TextContent]:
                     "mae_pct": mae_pct,
                     "n_training_samples": samples,
                     "market_value_eur_per_ha": market_val,
+                    "price_eur_per_t": market_price,
                     "ndvi_correction_applied": ndvi_info.get("applied", False),
                 })
             except Exception as e:
@@ -1339,8 +1342,9 @@ def _handle_compare_regions(**kwargs: Any) -> list[types.TextContent]:
     summary_parts = []
     if results:
         best = results[0]
+        best_price = f" @ {best['price_eur_per_t']}€/t" if best.get('price_eur_per_t') else ""
         summary_parts.append(f"Best: {best['crop']} in {best['region']} ({best['region_name']}) — {best['predicted_yield_t_ha']:.2f} t/ha" +
-                            (f" — {best['market_value_eur_per_ha']:.0f}€/ha" if best['market_value_eur_per_ha'] else ""))
+                            (f" — {best['market_value_eur_per_ha']:.0f}€/ha{best_price}" if best['market_value_eur_per_ha'] else ""))
         if len(results) > 1:
             worst = results[-1]
             summary_parts.append(f"Worst: {worst['crop']} in {worst['region']} ({worst['region_name']}) — {worst['predicted_yield_t_ha']:.2f} t/ha")
