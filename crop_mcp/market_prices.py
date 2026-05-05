@@ -61,12 +61,30 @@ REFERENCE_PRICES = {
         "note": "Kein Future-Markt — regionale Erfassungspreise",
         "updated": "2026-05-01",
     },
+    "rapeseed": {
+        "price_eur_per_t": 470,
+        "market": "Euronext MATIF (Paris)",
+        "contract": "ECO (Rapeseed Futures)",
+        "source": "Referenzpreis — MATIF Paris (yfinance)",
+        "note": "Winterraps, frei Ölmühle",
+        "updated": "2026-05-04",
+    },
+    "sunflower": {
+        "price_eur_per_t": 420,
+        "market": "ICE Futures Europe / Regional",
+        "contract": "Sunflower seed (Black Sea reference)",
+        "source": "Black Sea / Argus Media reference",
+        "note": "Sonnenblumenkerne, frei Ölmühle",
+        "updated": "2026-05-04",
+    },
 }
 
 PRODUCTION_COSTS = {
     "wheat": {"min": 500, "max": 800, "average": 650, "note": "Inkl. Saatgut, Dünger, Pflanzenschutz, Ernte"},
     "corn": {"min": 550, "max": 850, "average": 700, "note": "Körnermais, inkl. Trocknungskosten"},
     "barley": {"min": 450, "max": 750, "average": 600, "note": "Futtergerste, extensiver als Weizen"},
+    "rapeseed": {"min": 600, "max": 950, "average": 780, "note": "Winterraps, hohe Dünger- & Pflanzenschutzkosten"},
+    "sunflower": {"min": 500, "max": 800, "average": 650, "note": "Sonnenblumen, extensiver als Raps (weniger Dünger)"},
 }
 
 

@@ -1,5 +1,31 @@
 # Changelog — CropProphEU
 
+## 2026-05-04 — V4.9
+
+### Added
+- **2 neue Kulturen**: Raps (rapeseed) + Sonnenblumen (sunflower) — datengetrieben
+- **Raps-Modell**: 717 Samples, 8 Länder (FR, RO, HU, ES, IT, BG, PT, EL) — LOYO MAE **0.72 t/ha (13.4%)**
+- **Sonnenblumen-Modell**: 644 Samples, 8 Länder (FR, RO, HU, ES, IT, BG, PT, EL) — LOYO MAE **0.64 t/ha (11.7%)**
+- `build_europe.py`: Unterstützt `--crop rapeseed` und `--crop sunflower`
+- `train_europe_fast.py`: Neues Feature `best_estimator` speichert Modell-Typ-Metadaten im Pickle
+
+### Model Performance
+
+| Crop | LOYO MAE | R² (LOYO) | Top-Feature |
+|------|----------|-----------|-------------|
+| 🌾 Raps | **0.724 (13.4%)** | 0.539 | AWC 42.2% |
+| 🌻 Sonnenblumen | **0.636 (11.7%)** | 0.581 | AWC 37.3% |
+
+### Changed
+- `europe_model_api.py`: Fallback-Baseline um `min`/`max` erweitert (verhindert KeyError bei Ländern außerhalb des Trainings-Sets)
+- `CROPS` + `REGIONS`-Definitionen: rapeseed + sunflower bereits integriert (keine Schema-Änderung nötig)
+- `VERIFIED_CROPS`: `"rapeseed"` und `"sunflower"` aufgenommen
+
+### Technical Notes
+- Rapeseed: Bestes Modell Ridge (alpha=5), gespeichert als RF 200 trees für Yield-at-Risk
+- Sunflower: Bestes Modell RF 200 trees — hoher Sand-Einfluss (19.7%) bestätigt Trockentoleranz
+- AWC dominiert beide Modelle (>37%) — Wasserhaltefähigkeit ist der limitierende Faktor für Ölsaaten in Südeuropa
+
 ## 2026-05-04 — V4.8
 
 ### Added

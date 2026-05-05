@@ -728,9 +728,8 @@ class EuropeanYieldForecastInput(BaseModel):
     """Predict crop yield for EU countries using Eurostat-verified data."""
     crop: str = Field(
         ...,
-        pattern=r"^(wheat|corn|barley)$",
-        description="Crop type. Verified crops: wheat (C1100), corn/grain maize (C1500), barley (C1300). "
-                    "Rapeseed and sunflower: no Eurostat yield data available.",
+        pattern=r"^(wheat|corn|barley|rapeseed|sunflower)$",
+        description="Crop type. Verified crops: wheat (C1100), corn (C1500), barley (C1300), rapeseed (C2000), sunflower (C2200).",
     )
     region: str = Field(
         ...,
@@ -754,8 +753,8 @@ class ClimateScenarioInput(BaseModel):
     """Climate scenario analysis: What if temperature/precipitation changes?"""
     crop: str = Field(
         ...,
-        pattern=r"^(wheat|corn|barley)$",
-        description="Crop to analyze (verified: wheat, corn, barley)",
+        pattern=r"^(wheat|corn|barley|rapeseed|sunflower)$",
+        description="Crop to analyze (verified: wheat, corn, barley, rapeseed, sunflower)",
     )
     region: str = Field(
         ...,
@@ -1115,7 +1114,7 @@ def _build_human_summary(result: dict, language: str = "de") -> str:
     return "\n".join(lines)
 
 class YieldAndValueInput(BaseModel):
-    crop: str = Field(..., pattern=r"^(wheat|corn|barley)$", description="Crop (verified: wheat, corn, barley)")
+    crop: str = Field(..., pattern=r"^(wheat|corn|barley|rapeseed|sunflower)$", description="Crop (verified: wheat, corn, barley, rapeseed, sunflower)")
     region: str = Field(..., min_length=4, max_length=5, description="NUTS2 code (e.g. DEE0)")
     gdd: float | None = Field(default=None, description="Optional GDD (growing degree days)")
     precipitation_mm: float | None = Field(default=None, description="Optional precipitation in mm")
@@ -1297,10 +1296,9 @@ TOOLS = {
     "europe_yield_forecast": {
         "handler": _handle_europe_yield_forecast,
         "description": (
-            "Pan-European yield forecast for 3 verified crops (wheat, corn, barley). "
-            "Uses Random Forest trained on Eurostat yield data (C1100/C1300/C1500) "
-            "across 25 EU countries. Combines weather + 7 soil features + yield-at-risk. "
-            "NOTE: rapeseed and sunflower NOT supported — no Eurostat yield data available."
+            "Pan-European yield forecast for 5 verified crops (wheat, corn, barley, rapeseed, sunflower). "
+            "Uses Random Forest trained on Eurostat yield data (C1100/C1300/C1500/C2000/C2200) "
+            "across 25 EU countries. Combines weather + 7 soil features + yield-at-risk."
         ),
         "input_schema": EuropeanYieldForecastInput.model_json_schema(),
     },
@@ -1321,8 +1319,7 @@ TOOLS = {
             "Output includes a plain-language summary in German (default) or English. "
             "Set language='en' for English output, language='de' for German. "
             "Auto-detects from the language parameter if provided. "
-            "Verified crops: wheat, corn, barley. "
-            "Rapeseed and sunflower: no Eurostat yield data available."
+            "Verified crops: wheat, corn, barley, rapeseed, sunflower."
         ),
         "input_schema": YieldAndValueInput.model_json_schema(),
     },

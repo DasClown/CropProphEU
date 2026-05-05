@@ -43,8 +43,12 @@ build_features.py
 check_*.py
 train_model.py
 
-# Large exports
-europe_model.json
+# Root-level model/data (generated copies)
+europe_yield_model_rapeseed.pkl
+europe_yield_model_sunflower.pkl
+europe_training_data_rapeseed.json
+europe_training_data_sunflower.json
+europe_checkpoint_barley.json
 
 # Test / temp scripts
 tests/__pycache__/

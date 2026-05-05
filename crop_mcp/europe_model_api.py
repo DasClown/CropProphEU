@@ -17,8 +17,9 @@ DATA_DIR = "/home/j/crop-mcp/data"
 
 # Only crops with VERIFIED Eurostat yield data
 # C1100 = wheat, C1300 = barley, C1500 = grain maize (corn)
-# Rapeseed (C2000) and Sunflower (C2200): NO Eurostat data available
-VERIFIED_CROPS = {"wheat", "corn", "barley"}
+# C2000 = rapeseed (FR, RO, HU, ES, IT, BG, PT, EL)
+# C2200 = sunflower (FR, RO, HU, ES, IT, BG, PT, EL)
+VERIFIED_CROPS = {"wheat", "corn", "barley", "rapeseed", "sunflower"}
 
 # Per-crop model cache
 _model_caches: dict[str, dict] = {}
@@ -130,7 +131,7 @@ def predict_europe_yield(region_code, country, crop="wheat",
         p90 = pred + 0.5
 
     confidence = "high"
-    baseline = baselines.get(country, baselines.get('DE', {'mean': 7.5, 'std': 0.5}))
+    baseline = baselines.get(country, baselines.get('DE', {'mean': 7.5, 'std': 0.5, 'min': 0.0, 'max': 15.0}))
 
     return {
         "region": region_code,

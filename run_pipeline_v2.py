@@ -26,7 +26,7 @@ def run_step(label, cmd, timeout=3600):
     sys.stdout.flush()
     return r
 
-for crop in ["wheat", "corn", "barley"]:
+for crop in ["wheat", "corn", "barley", "rapeseed", "sunflower"]:
     # Clean checkpoint
     cp_file = "europe_checkpoint.json" if crop == "wheat" else f"europe_checkpoint_{crop}.json"
     cp_path = os.path.join(BASE, cp_file)

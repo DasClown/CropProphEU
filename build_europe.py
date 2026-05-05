@@ -36,11 +36,23 @@ country_yields = {}
 # C1100 = Common wheat + spelt → wheat
 # C1300 = Barley
 # C1500 = Grain maize → corn
-# Rapeseed (C2000) and Sunflower (C2200): NO Eurostat yield data available
+# C2000 = Rapeseed → verified for: FR, RO, HU, ES, IT, BG, PT, EL
+# C2200 = Sunflower seed → verified for: FR, RO, HU, ES, IT, BG, PT, EL
 EUROSTAT_CROP_CODES = {
     "wheat": "C1100",
     "barley": "C1300",
     "corn": "C1500",
+    "rapeseed": "C2000",
+    "sunflower": "C2200",
+}
+
+# Crop-specific country lists (only countries with verified Eurostat yield data)
+CROP_COUNTRIES = {
+    "wheat": COUNTRIES,
+    "barley": COUNTRIES,
+    "corn": COUNTRIES,
+    "rapeseed": ["FR", "RO", "HU", "ES", "IT", "BG", "PT", "EL"],
+    "sunflower": ["FR", "RO", "HU", "ES", "IT", "BG", "PT", "EL"],
 }
 
 DAYS_IN_MONTH = {1:31,2:28,3:31,4:30,5:31,6:30,7:31,8:31,9:30,10:31,11:30,12:31}
@@ -221,28 +233,30 @@ if __name__ == '__main__':
     _eurostat_code = EUROSTAT_CROP_CODES.get(_crop_name)
     if not _eurostat_code:
         print(f"\n❌ ERROR: No verified Eurostat yield data for '{_crop_name}'.")
-        print(f"   Available crops with verified data: {list(EUROSTAT_CROP_CODES.keys())}")
-        print(f"   For rapeseed/sunflower: need alternative data source (FAO/FADN).")
+        print(f"   Available crops: {list(EUROSTAT_CROP_CODES.keys())}")
         sys.exit(1)
     
+    # Use crop-specific country list
+    _crop_countries = CROP_COUNTRIES.get(_crop_name, COUNTRIES)
+
     all_features, processed_countries = load_checkpoint()
     crop = get_crop(_crop_name)
-    
+
     print(f"🔄 Resume: {len(all_features)} samples done, processed: {processed_countries}")
-    
+
     # Step 1: Download yields for ALL countries (including processed, for yield lookup)
-    print("\n=== Step 1: Country yields ===")
-    for c in COUNTRIES:
+    print(f"\n=== Step 1: Country yields ({len(_crop_countries)} countries) ===")
+    for c in _crop_countries:
         try:
             country_yields[c] = fetch_eurostat(c, _eurostat_code)
             print(f"  {c}: {len(country_yields[c])} years")
             time.sleep(0.2)
         except Exception as e:
             print(f"  {c}: ERROR — {str(e)[:50]}")
-    
+
     # Step 2: Generate features per country
     print("\n=== Step 2: Feature generation ===")
-    for cntry in COUNTRIES:
+    for cntry in _crop_countries:
         if cntry in processed_countries:
             n = len([s for s in all_features if s['country'] == cntry])
             print(f"  {cntry}: ✓ already done ({n} samples)")
