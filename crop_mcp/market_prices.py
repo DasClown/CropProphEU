@@ -79,13 +79,111 @@ REFERENCE_PRICES = {
     },
 }
 
-PRODUCTION_COSTS = {
-    "wheat": {"min": 500, "max": 800, "average": 650, "note": "Inkl. Saatgut, Dünger, Pflanzenschutz, Ernte"},
-    "corn": {"min": 550, "max": 850, "average": 700, "note": "Körnermais, inkl. Trocknungskosten"},
-    "barley": {"min": 450, "max": 750, "average": 600, "note": "Futtergerste, extensiver als Weizen"},
-    "rapeseed": {"min": 600, "max": 950, "average": 780, "note": "Winterraps, hohe Dünger- & Pflanzenschutzkosten"},
-    "sunflower": {"min": 500, "max": 800, "average": 650, "note": "Sonnenblumen, extensiver als Raps (weniger Dünger)"},
+# Country-specific production costs (€/ha) per crop
+# Sources: FADN, KTBL (DE), ARVALIS (FR), AHDB (UK), EU-Kommission Agrarausblick
+COUNTRY_PRODUCTION_COSTS = {
+    "wheat": {
+        "default": 650,
+        "note": "Inkl. Saatgut, Dünger, Pflanzenschutz, Ernte",
+        "by_country": {
+            # Western Europe — high input
+            "NL": 950, "BE": 850, "DK": 800, "IE": 750,
+            # Northern Europe
+            "FI": 700, "SE": 700,
+            # Central/Western
+            "DE": 680, "UK": 700, "AT": 650,
+            # Southern
+            "FR": 620, "IT": 700, "ES": 450, "PT": 450, "EL": 480,
+            # Central-Eastern
+            "CZ": 550, "SI": 550, "SK": 480, "HU": 480,
+            # Eastern
+            "PL": 450, "HR": 420, "LT": 420, "EE": 400, "LV": 400,
+            # Balkans
+            "BG": 380, "RO": 380,
+            # Eastern Europe
+            "UA": 300,
+            # Mediterranean
+            "CY": 450, "MT": 550,
+        },
+        "range_eur_per_ha": [250, 1200],
+    },
+    "corn": {
+        "default": 700,
+        "note": "Körnermais, inkl. Trocknungskosten",
+        "by_country": {
+            "NL": 1000, "BE": 900, "DK": 850, "DE": 750, "FR": 680,
+            "IT": 800, "ES": 500, "PL": 500, "HU": 520, "RO": 420,
+            "BG": 420, "UA": 350, "AT": 700, "CZ": 600, "SK": 520,
+        },
+        "range_eur_per_ha": [300, 1200],
+    },
+    "barley": {
+        "default": 600,
+        "note": "Futtergerste, extensiver als Weizen",
+        "by_country": {
+            "NL": 850, "BE": 780, "DK": 750, "DE": 620, "FR": 560,
+            "PL": 400, "CZ": 500, "AT": 580, "ES": 400, "UK": 620,
+            "SE": 620, "FI": 620, "IE": 680, "UA": 280,
+        },
+        "range_eur_per_ha": [250, 1000],
+    },
+    "rapeseed": {
+        "default": 780,
+        "note": "Winterraps, hohe Dünger- & Pflanzenschutzkosten",
+        "by_country": {
+            "DE": 800, "FR": 750, "PL": 550, "UK": 800, "CZ": 650,
+            "AT": 750, "DK": 850, "HU": 580, "RO": 480, "BG": 480,
+            "UA": 380,
+        },
+        "range_eur_per_ha": [350, 1100],
+    },
+    "sunflower": {
+        "default": 650,
+        "note": "Sonnenblumen, extensiver als Raps (weniger Dünger)",
+        "by_country": {
+            "FR": 600, "ES": 420, "IT": 600, "RO": 380, "BG": 380,
+            "HU": 450, "UA": 300, "EL": 420, "PT": 400,
+        },
+        "range_eur_per_ha": [250, 900],
+    },
 }
+
+# Legacy flat PRODUCTION_COSTS — kept for backwards compatibility
+PRODUCTION_COSTS = {
+    crop: {"min": info["range_eur_per_ha"][0], "max": info["range_eur_per_ha"][1],
+           "average": info["default"], "note": info["note"]}
+    for crop, info in COUNTRY_PRODUCTION_COSTS.items()
+}
+
+
+def get_production_cost(crop: str, country: str = None) -> dict:
+    """Get production cost for a crop, optionally country-specific.
+    
+    Returns dict with 'eur_per_ha', 'range', 'note'.
+    Falls back to default if country not found.
+    """
+    crop = crop.lower()
+    info = COUNTRY_PRODUCTION_COSTS.get(crop, PRODUCTION_COSTS.get(crop))
+    if info is None:
+        return {"eur_per_ha": 650, "range": [300, 1000], "note": "Geschätzt"}
+    
+    if country and "by_country" in info:
+        by_country = info["by_country"]
+        # Normalize: try as-is, then 2-letter, then uppercase
+        cost = by_country.get(country.upper())
+        if cost is None:
+            cost = by_country.get(country[:2].upper(), info["default"])
+        return {
+            "eur_per_ha": cost,
+            "range": info.get("range_eur_per_ha", [300, 1000]),
+            "note": info["note"],
+        }
+    
+    return {
+        "eur_per_ha": info["default"],
+        "range": info.get("range_eur_per_ha", [300, 1000]),
+        "note": info["note"],
+    }
 
 
 def get_market_price(crop: str) -> dict:
@@ -118,7 +216,8 @@ def get_market_price(crop: str) -> dict:
     }
 
 
-def calculate_revenue(yield_t_ha: float, crop: str, include_costs: bool = True) -> dict:
+def calculate_revenue(yield_t_ha: float, crop: str, include_costs: bool = True,
+                     country: str = None) -> dict:
     """Calculate revenue and margin from yield + market price."""
     price_info = get_market_price(crop)
     if price_info["status"] == "error":
@@ -139,13 +238,14 @@ def calculate_revenue(yield_t_ha: float, crop: str, include_costs: bool = True) 
     }
     
     if include_costs and crop in PRODUCTION_COSTS:
-        costs = PRODUCTION_COSTS[crop]
-        avg_cost = costs["average"]
+        cost_info = get_production_cost(crop, country)
+        avg_cost = cost_info["eur_per_ha"]
         margin = revenue_eur_ha - avg_cost
         result["production_costs"] = {
             "estimated_eur_per_ha": avg_cost,
-            "range_eur_per_ha": [costs["min"], costs["max"]],
-            "note": costs["note"],
+            "country_specific": country if country else False,
+            "range_eur_per_ha": cost_info["range"],
+            "note": cost_info["note"],
         }
         result["margin_eur_per_ha"] = margin
         result["margin_is_positive"] = margin > 0

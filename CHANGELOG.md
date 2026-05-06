@@ -1,5 +1,31 @@
 # Changelog — CropProphEU
 
+## 2026-05-06 — V5.3 (Country-Specific Production Costs 🔴)
+
+### Added
+- **Länderspezifische Produktionskosten** für alle 5 Kulturen (Weizen, Mais, Gerste, Raps, Sonnenblumen)
+- **`COUNTRY_PRODUCTION_COSTS`**: Nested dict mit 28 Ländern für Weizen, Mais, Gerste, Raps, Sonnenblumen
+- **`get_production_cost(crop, country)`**: Neue Funktion für country-spezifische Kostenabfrage
+- Export von `get_production_cost` + `REFERENCE_PRICES` in `__init__.py`
+
+### Changed
+- `calculate_revenue()`: Neuer Parameter `country` — berechnet länderspezifische Kosten statt pauschaler 650€/ha
+- `server.py`: Alle `calculate_revenue()`-Aufrufe übergeben jetzt das Herkunftsland (`country=cnt` / `country=country`)
+- Alle 5 Kulturen haben jetzt länderspezifische Kosten pro EU-Staat
+
+### Fixed
+- 🔴 **Bug: Bulgarien/Rumänien/Polen hatten fälschlich 650€/ha** — korrigiert auf 380€/ha (BG/RO) und 450€/ha (PL)
+- NL/BE Kosten korrigiert: 950€/ha (NL) und 850€/ha (BE) — hohe Pacht und Intensität
+- Ukraine: 300€/ha (realistische Niedrigkosten)
+
+### Data Sources
+- FADN (EU Farm Accountancy Data Network)
+- KTBL (Deutschland), ARVALIS (Frankreich), AHDB (UK)
+- EU-Kommission Agrarausblick
+- Nationale Agrarberichte
+
+---
+
 ## 2026-05-05 — V5.2 (Visibility Release 🚀)
 
 ### Added

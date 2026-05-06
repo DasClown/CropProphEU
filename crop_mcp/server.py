@@ -1236,7 +1236,7 @@ def _handle_yield_and_value(**kwargs: Any) -> list[types.TextContent]:
     solar, soil_m = 5.0, 0.5
     r = predict_europe_yield(v.region, cnt, crop=v.crop, gdd=gdd, precip_mm=pr, solar_kwh=solar, soil_moisture=soil_m)
     if _HAS_MARKET_PRICES:
-        r["market_value"] = calculate_revenue(r.get("predicted_yield_t_ha",0), v.crop)
+        r["market_value"] = calculate_revenue(r.get("predicted_yield_t_ha",0), v.crop, country=cnt)
     r["features_used"] = {"gdd":round(gdd,1),"precipitation_mm":round(pr,1),"solar_kwh":round(solar,2),"soil_moisture":round(soil_m,3)}
     r["region"] = v.region
     r["country"] = cnt
@@ -1247,7 +1247,7 @@ def _handle_yield_and_value(**kwargs: Any) -> list[types.TextContent]:
         _apply_ndvi_correction(r, v.region, reg.latitude, reg.longitude, v.crop)
         # Recalculate market value with corrected yield
         if _HAS_MARKET_PRICES and r.get("ndvi_correction", {}).get("applied"):
-            r["market_value"] = calculate_revenue(r.get("predicted_yield_t_ha", 0), v.crop)
+            r["market_value"] = calculate_revenue(r.get("predicted_yield_t_ha", 0), v.crop, country=cnt)
     except Exception:
         r["ndvi_correction"] = {"applied": False, "reason": "exception_during_correction"}
 
@@ -1331,7 +1331,7 @@ def _handle_compare_regions(**kwargs: Any) -> list[types.TextContent]:
                 if _HAS_MARKET_PRICES:
                     try:
                         from .market_prices import calculate_revenue as _calc_rev
-                        _rev = _calc_rev(y_corrected, crop)
+                        _rev = _calc_rev(y_corrected, crop, country=country)
                         if isinstance(_rev, dict):
                             market_val = _rev.get("revenue_eur_per_ha")
                             market_price = _rev.get("price_eur_per_t")
