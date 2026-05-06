@@ -6,7 +6,7 @@ Zieht live Predictions + Live-Marktpreise, vergleicht mit Historie (Eurostat 201
 """
 import json, sys, os
 sys.path.insert(0, '/home/j/crop-mcp')
-from crop_mcp.market_prices import get_market_price
+from crop_mcp.market_prices import get_market_price, get_production_cost
 from crop_mcp.server import _handle_compare_regions
 
 # ── Live-Marktpreise ──
@@ -17,7 +17,6 @@ for c in ['wheat','corn','barley','rapeseed']:
     PRICES[c] = p['price_eur_per_t']
     PRICE_SOURCES[c] = '🔴 LIVE' if p.get('live_quote') else '📖 REF'
 
-COSTS = {'wheat': 650, 'barley': 600, 'corn': 700, 'rapeseed': 780}
 REGIONS = ['DEE0','DEF0','UKH1']
 CROPS = ['wheat','barley','corn','rapeseed']
 REGION_NAMES = {'DEE0':'Sachsen-Anhalt','DEF0':'Schleswig-Holstein','UKH1':'East of England'}
@@ -53,8 +52,10 @@ for rid in REGIONS:
         
         p = predictions[key]
         pred_y = p['predicted_yield_t_ha']
-        price = p.get('price_eur_per_t') or PRICES[crop]  # from tool if available, else local
-        cost = COSTS[crop]
+        country = p.get('country', '')
+        price = p.get('price_eur_per_t') or PRICES[crop]
+        cost_info = get_production_cost(crop, country)
+        cost = cost_info['eur_per_ha']
         
         samples = [s for s in data_all[crop] if s.get('region','') == rid]
         recent = [s for s in samples if 2019 <= s.get('year',0) <= 2024]
@@ -130,7 +131,7 @@ for r, ha in allocs:
 
 print(f"  {'':19} {'───':>3s}   {'──────':>6s}")
 print(f"  {'':19} Gesamt: {total:>6,} €")
-print(f"  Ø Marge: {total//100:,} €/ha | ROI: {total//sum(COSTS[r['crop']] for r,_ in allocs)*100 if False else ''}%")
+print(f"  Ø Marge: {total//100:,} €/ha")
 
 print()
 print(f"{'─'*66}")

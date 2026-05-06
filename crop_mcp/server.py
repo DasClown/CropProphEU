@@ -1205,13 +1205,18 @@ class PortfolioOptimizerInput(BaseModel):
     language: str | None = Field(default=None, description="Output language")
 
 
-_PROD_COSTS = {
-    "wheat": {"avg": 650, "min": 500, "max": 800},
-    "barley": {"avg": 600, "min": 450, "max": 750},
-    "corn": {"avg": 700, "min": 550, "max": 850},
-    "rapeseed": {"avg": 780, "min": 600, "max": 950},
-    "sunflower": {"avg": 650, "min": 500, "max": 800},
-}
+
+def _get_crop_cost(crop: str, country: str = None) -> int:
+    """Get production cost for a crop, country-specific if possible."""
+    try:
+        from .market_prices import get_production_cost as _gpc
+        info = _gpc(crop, country)
+        return info["eur_per_ha"]
+    except Exception:
+        return {
+            "wheat": 650, "barley": 600, "corn": 700,
+            "rapeseed": 780, "sunflower": 650,
+        }.get(crop, 700)
 
 
 def _handle_yield_and_value(**kwargs: Any) -> list[types.TextContent]:
@@ -1415,10 +1420,10 @@ def _handle_portfolio_optimizer(**kwargs: Any) -> list[types.TextContent]:
     opportunities = []
     for p in predictions:
         crop = p["crop"]
+        country = p.get("country", "")
         yield_t_ha = p["predicted_yield_t_ha"]
         revenue = p.get("market_value_eur_per_ha", 0) or 0
-        costs = _PROD_COSTS.get(crop, {"avg": 700})
-        cost = costs["avg"]
+        cost = _get_crop_cost(crop, country)
         margin = revenue - cost
         roi_pct = round((margin / cost) * 100, 1) if cost > 0 else 0
         
