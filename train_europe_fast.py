@@ -2,8 +2,9 @@
 """
 Fast training: Ridge RF + simplified CV for large datasets.
 """
-import json, sys, math, pickle
+import json, sys, math
 import numpy as np
+import joblib
 from collections import defaultdict
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import Ridge
@@ -161,7 +162,7 @@ model_pkg = {
     'best_estimator': best_model[0] if best_model else "RF_200",
 }
 with open(MODEL_PATH, 'wb') as f:
-    pickle.dump(model_pkg, f)
+    joblib.dump(model_pkg, f)
 
 print(f"\n✅ Model saved: {MODEL_PATH}")
 print(f"   LOYO MAE: {mae_loyo:.3f} t/ha ({rel_loyo:.1f}%)")

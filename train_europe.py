@@ -3,7 +3,8 @@
 Train European wheat yield model on 15 countries × 59 NUTS2 regions.
 Random Forest with Leave-One-Year-Out CV + Country one-hot encoding.
 """
-import json, sys, math, pickle
+import json, sys, math
+import joblib
 import numpy as np
 from collections import defaultdict
 from sklearn.ensemble import RandomForestRegressor
@@ -159,7 +160,7 @@ model_pkg = {
 }
 
 with open(MODEL_PATH, 'wb') as f:
-    pickle.dump(model_pkg, f)
+    joblib.dump(model_pkg, f)
 
 print(f"✅ Saved: {MODEL_PATH}")
 print(f"   MAE: {best_model[2]:.3f} t/ha ({best_model[2]/np.mean(y_all)*100:.1f}%)")

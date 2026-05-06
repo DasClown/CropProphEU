@@ -1188,8 +1188,10 @@ class YieldAndValueInput(BaseModel):
 
 
 class CompareRegionsInput(BaseModel):
-    regions: str = Field(..., description="Comma-separated NUTS2 codes (e.g. 'DEE0,FR10,PL22'). Minimum 2. Max 20.")
-    crops: str = Field(..., description="Comma-separated crop names (e.g. 'wheat,corn,barley'). Options: wheat, corn, barley, rapeseed, sunflower.")
+    regions: str = Field(..., description="Comma-separated NUTS2 codes (e.g. 'DEE0,FR10,PL22'). Minimum 2. Max 20.",
+                         pattern=r"^[A-Za-z]{2}[A-Za-z0-9]{2,3}(?:,[A-Za-z]{2}[A-Za-z0-9]{2,3})+$")
+    crops: str = Field(..., description="Comma-separated crop names (e.g. 'wheat,corn,barley'). Options: wheat, corn, barley, rapeseed, sunflower.",
+                        pattern=r"^(wheat|corn|barley|rapeseed|sunflower)(?:,(wheat|corn|barley|rapeseed|sunflower))+$")
     year: int = Field(default=2025, description="Target year for predictions")
     language: str | None = Field(default=None, description="Output language: 'de' or 'en'")
 
@@ -1199,8 +1201,10 @@ class PortfolioOptimizerInput(BaseModel):
     budget_eur: float = Field(default=100000, description="Total budget in EUR for investment")
     risk_tolerance: str = Field(default="moderate", pattern=r"^(conservative|moderate|aggressive)$",
                                 description="Risk tolerance: conservative (stable regions/crops), moderate (balanced), aggressive (high-ROI)")
-    regions: str | None = Field(default=None, description="Optional NUTS2 filter (comma-separated). Default: top 15 regions.")
-    crops: str | None = Field(default=None, description="Optional crop filter (comma-separated). Default: all crops.")
+    regions: str | None = Field(default=None, description="Optional NUTS2 filter (comma-separated). Default: top 15 regions.",
+                                pattern=r"^[A-Za-z]{2}[A-Za-z0-9]{2,3}(?:,[A-Za-z]{2}[A-Za-z0-9]{2,3})*$")
+    crops: str | None = Field(default=None, description="Optional crop filter (comma-separated). Default: all crops.",
+                              pattern=r"^(wheat|corn|barley|rapeseed|sunflower)(?:,(wheat|corn|barley|rapeseed|sunflower))*$")
     year: int = Field(default=2026, description="Target year")
     language: str | None = Field(default=None, description="Output language")
 

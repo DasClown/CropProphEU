@@ -1,5 +1,22 @@
 # Changelog — CropProphEU
 
+## 2026-05-06 — V5.3c (Security-Härtung 🛡️)
+
+### Security
+- **Pickle → joblib**: `europe_model_api.py`, `train_europe.py`, `train_europe_fast.py` — sicherere Serialisierung
+- **File Permissions**: Alle `.pkl`-Modelle und Trainingsdaten auf `chmod 600` gesetzt (world-readable entfernt)
+- **Input Validation**: `CompareRegionsInput` und `PortfolioOptimizerInput` haben jetzt Pydantic-Pattern-Validation
+- **Dependencies**: `pyproject.toml` mit Upper-Bound-Pinning (`<2.0`, `<3.0`) für alle Abhängigkeiten
+- `joblib>=1.3,<2.0` als explizite Dependency hinzugefügt
+
+### Changed
+- `europe_model_api.py`: `pickle.load(f)` → `joblib.load(path)` (sicherer)
+- `train_europe*.py`: `pickle.dump()` → `joblib.dump()`
+- `server.py`: CompareRegionsInput.regions/crops + PortfolioOptimizerInput.regions/crops mit Pattern-Validierung
+- `pyproject.toml`: Alle Versions-Constraints gepinnt mit Upper-Bound
+
+---
+
 ## 2026-05-06 — V5.3 (Country-Specific Production Costs 🔴)
 
 ### Added

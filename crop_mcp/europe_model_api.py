@@ -9,7 +9,8 @@ Usage:
     from europe_model_api import predict_europe_yield, get_available_countries
     result = predict_europe_yield("DEE0", "DE", "wheat", 1450, 320, 4.2, 0.45)
 """
-import json, math, sys, os, pickle
+import json, math, sys, os
+import joblib
 from collections import defaultdict
 
 MODEL_DIR = "/home/j/crop-mcp/models"
@@ -36,7 +37,7 @@ def _load_model(crop: str = "wheat"):
         if not os.path.exists(path):
             raise FileNotFoundError(f"Model for '{crop}' not found at {path}")
         with open(path, 'rb') as f:
-            _model_caches[crop] = pickle.load(f)
+            _model_caches[crop] = joblib.load(path)
     return _model_caches[crop]
 
 
