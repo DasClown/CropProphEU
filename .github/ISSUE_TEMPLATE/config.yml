@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Dokumentation
+    url: https://github.com/DasClown/CropProphEU#readme
+    about: Lies zuerst die README
+  - name: 🐦 Telegram Bot
+    url: https://t.me/CropProphEU_bot
+    about: Teste den Bot direkt auf Telegram
+  - name: 🧪 Smithery
+    url: https://smithery.ai/servers/DasClown/CropProphEU
+    about: Installiere den Server via Smithery
+  - name: 💬 Discussions
+    url: https://github.com/DasClown/CropProphEU/discussions
+    about: Fragen, Ideen & Diskussionen mit der Community

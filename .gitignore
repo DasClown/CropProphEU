@@ -60,5 +60,3 @@ dist/
 *.egg-info/
 build/
 
-# GitHub
-.github/
