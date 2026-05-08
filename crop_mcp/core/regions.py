@@ -132,6 +132,10 @@ REGIONS: Dict[str, Region] = {
     "DEF0": Region(code="DEF0", name="Schleswig-Holstein", country="DE", latitude=54.2, longitude=10.0, altitude=20, major_crops=["wheat", "rapeseed", "barley"], area_km2=15799),
     "DEG0": Region(code="DEG0", name="Thüringen", country="DE", latitude=50.9, longitude=11.0, altitude=300, major_crops=["wheat", "rapeseed", "barley"], area_km2=16171),
     "DE80": Region(code="DE80", name="Mecklenburg-Vorpommern", country="DE", latitude=53.8, longitude=12.5, altitude=30, major_crops=["wheat", "rapeseed"], area_km2=23295),
+    # ── Hessen ──
+    "DE71": Region(code="DE71", name="Darmstadt", country="DE", latitude=49.9, longitude=8.7, altitude=200, major_crops=["wheat", "corn", "rapeseed", "barley"], area_km2=7446),
+    "DE72": Region(code="DE72", name="Gießen", country="DE", latitude=50.6, longitude=8.7, altitude=200, major_crops=["wheat", "barley", "corn", "rapeseed"], area_km2=5381),
+    "DE73": Region(code="DE73", name="Kassel", country="DE", latitude=51.3, longitude=9.5, altitude=300, major_crops=["wheat", "barley", "rapeseed"], area_km2=5784),
 
     # ── Poland ──
     "PL41": Region(code="PL41", name="Wielkopolskie", country="PL", latitude=52.3, longitude=17.0, altitude=90, major_crops=["wheat", "corn", "rapeseed"], area_km2=29826),

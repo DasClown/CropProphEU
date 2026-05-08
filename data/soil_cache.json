@@ -1618,5 +1618,50 @@
     "coarse_pct": 11.3,
     "awc_mm_m": 279.1,
     "texture_source": "lucas_2018_texture_289_points"
+  },
+  "DE71": {
+    "soc_g_kg": 64.4,
+    "ph": 5.4,
+    "nitrogen_g_kg": 6.05,
+    "cec_cmol_kg": 25.4,
+    "bdod_kg_dm3": 1.23,
+    "cfvo_pct": 9.6,
+    "soil_source": "soilgrids_v2",
+    "clay_pct": 16.7,
+    "sand_pct": 44.7,
+    "silt_pct": 38.6,
+    "coarse_pct": 10.3,
+    "awc_mm_m": 224.6,
+    "texture_source": "lucas_2018_texture_2015_points"
+  },
+  "DE72": {
+    "soc_g_kg": 16.0,
+    "ph": 6.2,
+    "nitrogen_g_kg": 1.6,
+    "cec_cmol_kg": 18.0,
+    "bdod_kg_dm3": 1.45,
+    "cfvo_pct": 3.5,
+    "soil_source": "country_fallback",
+    "clay_pct": 16.7,
+    "sand_pct": 44.7,
+    "silt_pct": 38.6,
+    "coarse_pct": 10.3,
+    "awc_mm_m": 224.6,
+    "texture_source": "lucas_2018_texture_2015_points"
+  },
+  "DE73": {
+    "soc_g_kg": 16.0,
+    "ph": 6.2,
+    "nitrogen_g_kg": 1.6,
+    "cec_cmol_kg": 18.0,
+    "bdod_kg_dm3": 1.45,
+    "cfvo_pct": 3.5,
+    "soil_source": "country_fallback",
+    "clay_pct": 16.7,
+    "sand_pct": 44.7,
+    "silt_pct": 38.6,
+    "coarse_pct": 10.3,
+    "awc_mm_m": 224.6,
+    "texture_source": "lucas_2018_texture_2015_points"
   }
 }
