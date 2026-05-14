@@ -816,7 +816,7 @@ class EuropeanYieldForecastInput(BaseModel):
     crop: str = Field(
         ...,
         pattern=r"^(wheat|corn|barley|rapeseed|sunflower)$",
-        description="Crop type. Verified crops: wheat (C1100), corn (C1500), barley (C1300), rapeseed (C2000), sunflower (C2200).",
+        description="Crop type. Verified crops: wheat (C1100), corn (C1500), barley (C1300), rapeseed (I1110), sunflower (I1120).",
     )
     region: str = Field(
         ...,
@@ -1707,7 +1707,7 @@ TOOLS = {
         "handler": _handle_europe_yield_forecast,
         "description": (
             "Pan-European yield forecast for 5 verified crops (wheat, corn, barley, rapeseed, sunflower). "
-            "Uses Random Forest trained on Eurostat yield data (C1100/C1300/C1500/C2000/C2200) "
+            "Uses Random Forest trained on Eurostat yield data (C1100/C1300/C1500/I1110/I1120) "
             "across 25 EU countries. Combines weather + 7 soil features + yield-at-risk."
         ),
         "input_schema": EuropeanYieldForecastInput.model_json_schema(),
