@@ -1,12 +1,15 @@
 # 🌾 CropProphEU — EU Crop Intelligence MCP Server
 
+[![CI](https://github.com/DasClown/CropProphEU/actions/workflows/ci.yml/badge.svg)](https://github.com/DasClown/CropProphEU/actions/workflows/ci.yml)
 [![Smithery](https://smithery.ai/badge/DasClown/CropProphEU)](https://smithery.ai/servers/DasClown/CropProphEU)
 [![Python ≥3.11](https://img.shields.io/badge/python-%3E%3D3.11-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/DasClown/CropProphEU?style=flat)](https://github.com/DasClown/CropProphEU/stargazers)
 [![Discussions](https://img.shields.io/github/discussions/DasClown/CropProphEU?style=flat&label=Discussions&color=informational)](https://github.com/DasClown/CropProphEU/discussions)
+[![Tests](https://img.shields.io/badge/tests-15%20passing-brightgreen)](tests/)
+[![Git LFS](https://img.shields.io/badge/data-LFS-blueviolet)](.gitattributes)
 
-**12 Tools, 5 Crops, 26 EU Countries, 123 NUTS2 Regions** — Yield forecasts, market values (€/ha), risk analysis & portfolio optimization for European agriculture. Built for AI agents, by AI agents.
+**13 MCP Tools, 5 Crops, 26 EU Countries, 123 NUTS2 Regions** — Yield forecasts, market values (€/ha), risk analysis, environmental risk scoring & portfolio optimization for European agriculture. Built for AI agents, by AI agents.
 
 > *"How will wheat perform in Sachsen-Anhalt this year? What's my best €/ha allocation across 100 ha?"*
 
@@ -16,15 +19,15 @@ pip install git+https://github.com/DasClown/CropProphEU.git
 
 ---
 
-## Features (12 MCP Tools)
+## Features (13 MCP Tools)
 
 | # | Tool | What it does | V |
 |---|------|-------------|---|
 | 1 | `yield_and_value` | Yield + **market value (€/ha)** + plain-language summary (DE/EN) | V4.6 |
 | 2 | `europe_yield_forecast` | Pan-European RF forecast with **Yield-at-Risk** (P10/P50/P90) + **NDVI correction** | V4.3 |
 | 3 | `crop_forecast` | Current season: GDD, rain, soil moisture, drought index, **frost warnings** | V4.0 |
-| 4 | `compare_regions` | **NEW** — Batch-compare 20 regions × 5 crops with live market prices | **V5.1** |
-| 5 | `portfolio_optimizer` | **NEW** — AI investment engine: budget → optimal allocation across regions × crops | **V5.1e** |
+| 4 | `compare_regions` | Batch-compare 20 regions × 5 crops with live market prices | **V5.1** |
+| 5 | `portfolio_optimizer` | AI investment engine: budget → optimal allocation across regions × crops | **V5.1e** |
 | 6 | `season_comparison` | Compare this season to historical years | V4.0 |
 | 7 | `region_health` | All crops for one region, single call | V4.5 |
 | 8 | `weather_outlook` | 16-day weather forecast | V4.0 |
@@ -32,6 +35,7 @@ pip install git+https://github.com/DasClown/CropProphEU.git
 | 10 | `yield_forecast` | Analog-year yield matching (DE-focused) | V3.0 |
 | 11 | `list_regions` | 123 NUTS2 regions across 26 countries | V4.2 |
 | 12 | `list_crops` | Crop parameters (GDD base, season, frost sensitivity) | V4.5 |
+| 13 | `environmental_risk` | **NEW V5.4** — ERS (forest, erosion, storm, hail) + **wild boar damage risk** for DE | **V5.4** |
 
 ---
 
@@ -121,7 +125,42 @@ docker run -p 8080:8080 crop-mcp crop-mcp --http --port 8080
 | Multi-language (DE/EN) | ✅ | ❌ | ❌ |
 | **Price** | **Free** | Free | **$10K+/yr** |
 
-**Unique**: Only **free** MCP server covering EU agriculture with soil → yield → market value → portfolio optimization in one pipeline.
+**Unique**: Only **free** MCP server covering EU agriculture with soil → yield → market value → environmental risk → portfolio optimization in one pipeline.
+
+---
+
+## V5.4 — Environmental Risk Score + Wildschaden 🌍🐗
+
+| Feature | Beschreibung |
+|:--------|:------------|
+| **Environmental Risk Score** | Komposit aus Waldanteil, Maisfläche, Bodenerosion, Sturm- + Hagelrisiko → 🟢🟡🔴 |
+| **Wildschaden DE** | DJV-Jagdstreckendaten + Waldrandindex + Maisflächenanteil → €/ha-Verlustschätzung |
+| **Ampel-System** | `🟢 low (<35)`, `🟡 moderate (35-65)`, `🔴 high (≥65)` |
+| **MCP Tool** | `environmental_risk(region='DE26')` → sofortige Analyse inkl. Wildschaden |
+
+**Beispiel Maßbach (DE26 Unterfranken):**
+```json
+{
+  "overall_risk": "🔴 high",
+  "ers_level": "🟡 moderate",
+  "wild_boar_risk": {"level": "🔴 high", "loss_eur_ha": 158},
+  "management": ["Waldrandstreifen 3-6m", "Drückjagd Nov-Dez", "8-Tage-Anzeigefrist §36 BayJG"]
+}
+```
+
+## V5.4 — Testing & CI 🧪
+
+| Maßnahme | Status |
+|:---------|:------:|
+| **pytest** | 15 Tests, alle passing (`tests/test_crop_mcp.py`) |
+| **GitHub Actions** | Automatischer CI-Check bei jedem Push |
+| **Git LFS** | `*.pkl` + große `.json` via LFS (aus Git-Tree entfernt) |
+
+Run tests:
+```bash
+pip install -e ".[test]"
+pytest tests/ -v
+```
 
 ---
 
@@ -208,8 +247,9 @@ Temperature: warm (2950°C GDD)
 ```
 crop-mcp/
 ├── crop_mcp/
-│   ├── server.py                 # 12 MCP tools
+|├── server.py                 # 13 MCP tools
 │   ├── europe_model_api.py       # RF (200 trees) + Yield-at-Risk + NDVI correction
+│   ├── environmental_risk.py     # **NEW V5.4** — ERS + Wildschaden DE
 │   ├── ndvi_correction.py        # Sentinel-2 NDVI correction factor (±30%)
 │   ├── market_prices.py          # Live CBOT/MATIF via Yahoo Finance
 │   ├── feature_cache.py          # Sub-second historical queries
@@ -219,6 +259,9 @@ crop-mcp/
 │   └── sources/                  # Weather, soil, NDVI, Eurostat, FAOSTAT fetchers
 ├── models/                       # .pkl files (download from Releases)
 ├── data/                         # Training data (generated by build)
+├── tests/                        # **NEW V5.4** — 15 pytest tests
+├── .github/workflows/            # **NEW V5.4** — CI (GitHub Actions)
+├── .gitattributes                # **NEW V5.4** — Git LFS tracking
 ├── pyproject.toml
 └── README.md
 ```

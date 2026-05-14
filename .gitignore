@@ -44,11 +44,20 @@ check_*.py
 train_model.py
 
 # Root-level model/data (generated copies)
+europe_yield_model.pkl
+europe_yield_model_barley.pkl
+europe_yield_model_corn.pkl
 europe_yield_model_rapeseed.pkl
 europe_yield_model_sunflower.pkl
+europe_training_data.json
+europe_training_data_barley.json
+europe_training_data_corn.json
 europe_training_data_rapeseed.json
 europe_training_data_sunflower.json
 europe_checkpoint_barley.json
+
+# Test results
+.pytest_cache/
 
 # Test / temp scripts
 tests/__pycache__/

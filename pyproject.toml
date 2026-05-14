@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "crop-mcp"
-version = "5.3.0"
+version = "5.4.0"
 description = "EU Crop Intelligence MCP Server — Yield forecasts, market value & risk analysis"
 readme = "README.md"
 license = {text = "MIT"}
@@ -41,6 +41,10 @@ http = [
     "starlette>=0.37,<2.0",
     "uvicorn>=0.27,<1.0",
 ]
+test = [
+    "pytest>=7.0,<10.0",
+    "pytest-cov>=4.0,<6.0",
+]
 dev = [
     "pytest>=7.0,<10.0",
     "build>=1.0,<2.0",
@@ -50,7 +54,8 @@ dev = [
 crop-mcp = "crop_mcp_cli:main"
 
 [tool.setuptools]
-packages = ["crop_mcp", "crop_mcp.core", "crop_mcp.sources"]
+packages.find = {include = ["crop_mcp*"]}
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]

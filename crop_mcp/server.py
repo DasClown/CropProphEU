@@ -67,6 +67,18 @@ try:
 except Exception:
     _HAS_NDVI = False
 
+# Environmental Risk Score (V5.4)
+try:
+    from .environmental_risk import (
+        compute_ers,
+        compute_wild_boar_risk,
+        full_environmental_risk,
+        batch_ers,
+    )
+    _HAS_ENV_RISK = True
+except Exception:
+    _HAS_ENV_RISK = False
+
 # NDVI Correction (adjusts model predictions with satellite data)
 try:
     from .ndvi_correction import compute_ndvi_correction as _ndvi_correct
@@ -336,6 +348,21 @@ class ListRegionsInput(BaseModel):
 class ListCropsInput(BaseModel):
     """List all supported crop types with agronomic parameters."""
     pass
+
+
+class EnvironmentalRiskInput(BaseModel):
+    """Assess environmental and wild boar damage risk for a region."""
+    region: str = Field(
+        ...,
+        min_length=4,
+        max_length=5,
+        description="NUTS2 region code (e.g. 'DEE0', 'DE26', 'FRB0'). "
+                    "Use list_regions to discover available codes.",
+    )
+    include_wild_boar: bool = Field(
+        default=True,
+        description="Include wild boar damage risk assessment (DE only, requires forest + corn data)",
+    )
 
 
 # ─────────────────────────────────────────────────────────────
@@ -1561,6 +1588,48 @@ def _handle_list_crops(**kwargs: Any) -> list[types.TextContent]:
 
 
 # ─────────────────────────────────────────────────────────────
+# Environmental Risk Handler (V5.4)
+# ─────────────────────────────────────────────────────────────
+
+def _handle_environmental_risk(**kwargs: Any) -> list[types.TextContent]:
+    """Environmental Risk Score + Wildschaden-Risiko fuer eine Region."""
+    v = EnvironmentalRiskInput(**kwargs)
+
+    if not _HAS_ENV_RISK:
+        return [types.TextContent(type="text", text=json.dumps({
+            "status": "error",
+            "message": "Environmental risk module not available.",
+        }))]
+
+    try:
+        region_code = v.region.upper()
+        country = region_code[:2]
+        is_de = country == "DE" or region_code.startswith("DE")
+
+        result = full_environmental_risk(region_code, country)
+
+        if not v.include_wild_boar or not is_de:
+            result["wild_boar_risk"] = {
+                "note": "Not requested or non-DE region",
+                "wild_boar_risk_score": 0,
+                "wild_boar_risk_level": "n/a",
+            }
+
+        return [types.TextContent(type="text", text=json.dumps({
+            "status": "ok",
+            "data": result,
+            "parameters": {"region": region_code, "include_wild_boar": v.include_wild_boar},
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }, indent=2))]
+
+    except Exception as e:
+        return [types.TextContent(type="text", text=json.dumps({
+            "status": "error",
+            "message": str(e)[:200],
+        }))]
+
+
+# ─────────────────────────────────────────────────────────────
 # Tool Registry
 # ─────────────────────────────────────────────────────────────
 
@@ -1686,6 +1755,19 @@ TOOLS = {
             "Example: portfolio_optimizer(budget_eur=500000, risk_tolerance='moderate')"
         ),
         "input_schema": PortfolioOptimizerInput.model_json_schema(),
+    },
+    "environmental_risk": {
+        "handler": _handle_environmental_risk,
+        "description": (
+            "Environmental Risk Score (ERS) for EU NUTS2 regions. "
+            "Combines forest cover, maize share, soil erosion, storm and hail risk "
+            "into a 3-tier (high/moderate/low) environmental risk indicator. "
+            "For German regions (DExx), also returns wild boar damage risk "
+            "with estimated €/ha losses for maize. "
+            "Use this to factor environmental hazards into crop decisions. "
+            "Example: environmental_risk(region='DE26') for Unterfranken/Massbach"
+        ),
+        "input_schema": EnvironmentalRiskInput.model_json_schema(),
     },
 }
 
