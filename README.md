@@ -1,5 +1,6 @@
 # 🌾 CropProphEU — EU Crop Intelligence MCP Server
 
+[![CI](https://github.com/DasClown/CropProphEU/actions/workflows/ci.yml/badge.svg)](https://github.com/DasClown/CropProphEU/actions/workflows/ci.yml)
 [![Python ≥3.11](https://img.shields.io/badge/python-%3E%3D3.11-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/DasClown/CropProphEU?style=flat)](https://github.com/DasClown/CropProphEU/stargazers)
@@ -152,19 +153,13 @@ docker run -p 8080:8080 crop-mcp crop-mcp --http --port 8080
 | Maßnahme | Status |
 |:---------|:------:|
 | **pytest** | 16 Tests, alle passing (`tests/test_crop_mcp.py`) |
-| **CI (GitHub Actions)** | Workflow lokal bereit — Push benötigt PAT mit `workflow`-Scope |
+| **CI (GitHub Actions)** | ✅ Aktiv bei jedem Push — Badge im Header grün |
 | **Git LFS** | `*.pkl` + große `.json` via LFS (aus Git-Tree entfernt) |
 
 Run tests:
 ```bash
 pip install -e ".[test]"
 pytest tests/ -v
-```
-
-CI aktivieren:
-```bash
-# PAT mit workflow-Scope erstellen → https://github.com/settings/tokens
-# Dann: git add .github/workflows/ci.yml && git push
 ```
 
 ---
