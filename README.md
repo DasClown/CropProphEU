@@ -257,9 +257,16 @@ Temperature: warm (2950°C GDD)
 ```
 crop-mcp/
 ├── crop_mcp/
-|├── server.py                 # 13 MCP tools
+|├── server.py                 # 857 Zeilen — Pydantic-Modelle + Tool-Registry + MCP-Init
+│   ├── tools/                  # **V5.4e** — Handler in logische Module aufgeteilt
+│   │   ├── weather.py          # weather_outlook, crop_forecast, season_comparison, region_health
+│   │   ├── yield_tools.py      # yield_forecast, europe_yield_forecast, yield_and_value, climate_scenario
+│   │   ├── market.py           # compare_regions, portfolio_optimizer
+│   │   ├── info.py             # list_regions, list_crops
+│   │   ├── environmental.py    # environmental_risk (V5.4)
+│   │   └── helpers.py          # Shared utilities (NDVI correction, frost, language)
 │   ├── europe_model_api.py       # RF (200 trees) + Yield-at-Risk + NDVI correction
-│   ├── environmental_risk.py     # **NEW V5.4** — ERS + Wildschaden DE
+│   ├── environmental_risk.py     # V5.4 — ERS + Wildschaden DE
 │   ├── ndvi_correction.py        # Sentinel-2 NDVI correction factor (±30%)
 │   ├── market_prices.py          # Live CBOT/MATIF via Yahoo Finance
 │   ├── feature_cache.py          # Sub-second historical queries
