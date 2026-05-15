@@ -1,0 +1,21 @@
+{
+  "status": "anchored",
+  "message": "Forecast hash submitted to OpenTimestamps. Pending Bitcoin confirmation (~1-24h).",
+  "ots_hash": "9550d4209f66bd8be45278db7650b923934fa9105ef16b0e50c78daec339b53c",
+  "ots_file": "/home/j/crop-mcp/.anchors/DE00_wheat_20260515_003508.txt.ots",
+  "timestamp": "2026-05-15T00:35:08.524374+00:00",
+  "chain": "bitcoin (via OpenTimestamps)",
+  "verification": "ots verify \"/home/j/crop-mcp/.anchors/DE00_wheat_20260515_003508.txt.ots\"",
+  "verified": false,
+  "anchor_data": {
+    "region": "DE00",
+    "crop": "wheat",
+    "predicted_yield_t_ha": 7.36,
+    "p10": 0,
+    "p90": 0,
+    "timestamp": "2026-05-15T00:35:08.524374+00:00",
+    "model_version": "V5.4",
+    "tool": "europe_yield_forecast"
+  },
+  "explorer_url": "https://opentimestamps.org/"
+}

@@ -1,0 +1,21 @@
+{
+  "status": "anchored",
+  "message": "Forecast hash submitted to OpenTimestamps. Pending Bitcoin confirmation (~1-24h).",
+  "ots_hash": "896f6b811d3da5a4a77b01d85cc9bf010603fb24b31fd9b3c5206bb2a05f655b",
+  "ots_file": "/home/j/crop-mcp/.anchors/DE00_rapeseed_20260515_003524.txt.ots",
+  "timestamp": "2026-05-15T00:35:24.102878+00:00",
+  "chain": "bitcoin (via OpenTimestamps)",
+  "verification": "ots verify \"/home/j/crop-mcp/.anchors/DE00_rapeseed_20260515_003524.txt.ots\"",
+  "verified": false,
+  "anchor_data": {
+    "region": "DE00",
+    "crop": "rapeseed",
+    "predicted_yield_t_ha": 2.63,
+    "p10": 0,
+    "p90": 0,
+    "timestamp": "2026-05-15T00:35:24.102878+00:00",
+    "model_version": "V5.4",
+    "tool": "europe_yield_forecast"
+  },
+  "explorer_url": "https://opentimestamps.org/"
+}
