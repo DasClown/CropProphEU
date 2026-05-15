@@ -79,6 +79,13 @@ try:
 except Exception:
     _HAS_ENV_RISK = False
 
+# Forecast Anchoring (OpenTimestamps — Bitcoin Proof-of-Forecast)
+try:
+    from .anchor import anchor_forecast, verify_anchor, list_anchors
+    _HAS_ANCHOR = True
+except Exception:
+    _HAS_ANCHOR = False
+
 # NDVI Correction (adjusts model predictions with satellite data)
 try:
     from .ndvi_correction import compute_ndvi_correction as _ndvi_correct
@@ -120,6 +127,9 @@ from .tools.info import (
 )
 from .tools.environmental import (
     _handle_environmental_risk,
+)
+from .tools.anchor import (
+    _handle_anchor_forecast,
 )
 
 _start_time = time.time()
@@ -343,6 +353,28 @@ class PortfolioOptimizerInput(BaseModel):
     language: str | None = Field(default=None, description="Output language")
 
 
+class AnchorForecastInput(BaseModel):
+    """Anchor a forecast on Bitcoin blockchain via OpenTimestamps (Proof-of-Forecast)."""
+    region: str = Field(
+        ..., min_length=4, max_length=5,
+        description="NUTS2 region code whose forecast to anchor",
+    )
+    crop: str = Field(
+        ..., pattern=r"^(wheat|corn|barley|rapeseed|sunflower)$",
+        description="Crop whose forecast to anchor",
+    )
+    yield_t_ha: float = Field(
+        ..., gt=0, le=20,
+        description="Predicted yield in t/ha to anchor",
+    )
+    p10: float | None = Field(default=None, description="P10 yield (lower bound)")
+    p90: float | None = Field(default=None, description="P90 yield (upper bound)")
+    label: str | None = Field(
+        default=None,
+        description="Optional label for this anchor (e.g. 'pre-WASDE June 2026')",
+    )
+
+
 # ─────────────────────────────────────────────────────────────
 # Tool Registry
 # ─────────────────────────────────────────────────────────────
@@ -482,6 +514,18 @@ TOOLS = {
             "Example: environmental_risk(region='DE26') for Unterfranken/Massbach"
         ),
         "input_schema": EnvironmentalRiskInput.model_json_schema(),
+    },
+    "anchor_forecast": {
+        "handler": _handle_anchor_forecast,
+        "description": (
+            "Anchor a forecast on Bitcoin blockchain via OpenTimestamps — Proof-of-Forecast. "
+            "Creates an immutable timestamp proving the forecast existed before official "
+            "reports (e.g., WASDE). Zero gas costs, zero keys needed. "
+            "Returns SHA256 hash + .ots proof file that can be verified independently. "
+            "Use this to generate verifiable audit trails for trading desks and insurers. "
+            "Example: anchor_forecast(region='DEE0', crop='wheat', yield_t_ha=7.35)"
+        ),
+        "input_schema": AnchorForecastInput.model_json_schema(),
     },
 }
 
