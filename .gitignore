@@ -12,6 +12,9 @@ data/training_data.json
 
 # Feature cache (auto-generated)
 feature_cache/
+
+# Forecast anchors (OpenTimestamps .ots proof files)
+.anchors/
 !feature_cache.py
 
 # Price cache
