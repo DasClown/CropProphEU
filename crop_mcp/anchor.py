@@ -58,10 +58,13 @@ def compute_hash(data: dict) -> str:
     raw = json.dumps(data, sort_keys=True, ensure_ascii=False, indent=2)
     return hashlib.sha256(raw.encode()).hexdigest()
 
-def anchor_forecast(forecast_output: dict) -> dict:
+def anchor_forecast(forecast_output: dict | None = None, **kwargs) -> dict:
     """
     Anchor a forecast output via OpenTimestamps.
-    
+
+    Accepts either a dict (forecast_output) or individual keyword arguments
+    (region, crop, predicted_yield_t_ha, p10, p90, model_version, label).
+
     Steps:
     1. Extract core forecast data
     2. Compute SHA256 hash
@@ -69,12 +72,14 @@ def anchor_forecast(forecast_output: dict) -> dict:
     4. Submit to OTS calendar (batched -> Bitcoin blockchain)
     5. Save .ots proof file locally
     6. Return anchor info
-    
+
     Returns dict with 'ots_hash', 'ots_file', 'timestamp', 'explorer_url'.
     """
     _ensure_dir()
-    
-    # 1. Extract + hash
+
+    # If kwargs provided, build dict from them
+    if forecast_output is None and kwargs:
+        forecast_output = kwargs
     core_data = _extract_forecast_data(forecast_output)
     forecast_hash = compute_hash(core_data)
     
