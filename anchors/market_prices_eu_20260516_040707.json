@@ -1,0 +1,18 @@
+{
+  "type": "market_price_snapshot",
+  "anchor_date": "2026-05-16T04:07:00Z",
+  "prices_eur_per_t": {
+    "wheat": 236,
+    "corn": 179,
+    "barley": 190,
+    "rapeseed": 470,
+    "sunflower": 420
+  },
+  "eur_usd": 1.09,
+  "sources": "yfinance (CBOT ZW=F, ZC=F) + MATIF premium",
+  "model_version": "V5.4.1",
+  "ots_hash": "a5858d9d81915edcc630cd0f51c61885cfa633a77e18b6afc48d2d37d8a4859a",
+  "ots_file": "market_prices_eu_20260516_040707_hash.txt.ots",
+  "precedes_event": "WASDE June 2026 (11 Jun)",
+  "verification_command": "ots verify anchors/market_prices_eu_20260516_040707_hash.txt.ots"
+}

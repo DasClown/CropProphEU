@@ -1,0 +1,33 @@
+# CropProphEU — EU Market Price Snapshot
+# Anchored: 2026-05-16T04:07:07Z
+# Model: V5.4.1
+# Source: yfinance (CBOT/MATIF) + Reference Prices
+
+Weizen (Brotweizen, mahlfähig):
+  price_eur_per_t: 236
+  market: Euronext MATIF (Paris)
+  note: Brotweizen (mahlfähig), frei Erste-Handelskette
+
+Mais (Körnermais):
+  price_eur_per_t: 179
+  market: Euronext MATIF (Paris)
+  note: Körnermais, frei Handelsstufe — MARKT GEFALLEN (CBOT Mai 2026)
+
+Gerste (Futtergerste):
+  price_eur_per_t: 190
+  market: Regionalbörsen (Mitte Deutschland)
+  note: Kein Future-Markt — regionale Erfassungspreise
+
+Raps (Winterraps):
+  price_eur_per_t: 470
+  market: Euronext MATIF (Paris)
+  note: Winterraps, frei Ölmühle
+
+Sonnenblumenkerne:
+  price_eur_per_t: 420
+  market: ICE Futures Europe / Regional
+  note: Sonnenblumenkerne, frei Ölmühle
+
+# EUR/USD reference 2026-05-16: ~1.09 (yfinance)
+# CBOT conversions: wheat bu * 36.744/bu + 35€ MATIF premium
+#                  corn bu * 39.368/bu + 25€ MATIF premium
