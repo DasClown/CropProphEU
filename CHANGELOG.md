@@ -1,5 +1,29 @@
 # Changelog — CropProphEU
 
+## 2026-05-18 — V5.4.3 (Monthly Outlook + Compact Anchors + ERS Integration 🚀)
+
+### Added
+- **`list_anchors` Tool (#15)**: Compact overview aller Proof-of-Forecast-Einträge
+  - Filterbar nach Region (NUTS2) und Crop
+  - Zeigt Timestamp, Yield, Status, OTS-Hash
+  - Handler: `crop_mcp/tools/anchor.py`
+  - Registriert in `server.py` TOOLS-Dict
+- **Monthly Outlook V5.4.2**: `scripts/monthly_outlook.py` komplett überarbeitet
+  - 18 EU-Regionen × 5 Kulturen (jetzt inkl. Sonnenblumen)
+  - ERS-Integration pro Region (Umweltrisiko-Ampel)
+  - Compact Anchors Sektion im Bericht
+  - KS-Agrar-Stil: DB/ha-Tabelle, ROI, Marktkommentar
+  - Live-Preise (Weizen 241€/t LIVE, Mais 183€/t LIVE)
+- **Self-Test**: `list_anchors` Testfall in `self_test()` integriert
+
+### Changed
+- `crop_mcp/__init__.py`: Version 5.4.0 → 5.4.3
+- `pyproject.toml`: Version 5.4.0 → 5.4.3
+- Cron-Job `crop-propheu-monthly-outlook`: Prompt aktualisiert auf V5.4.2
+- `server.py`: ListAnchorsInput Pydantic-Modell hinzugefügt (15 Tools total)
+
+---
+
 ## 2026-05-06 — V5.3c (Security-Härtung 🛡️)
 
 ### Security

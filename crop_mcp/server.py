@@ -130,6 +130,7 @@ from .tools.environmental import (
 )
 from .tools.anchor import (
     _handle_anchor_forecast,
+    _handle_list_anchors,
 )
 
 _start_time = time.time()
@@ -375,6 +376,22 @@ class AnchorForecastInput(BaseModel):
     )
 
 
+class ListAnchorsInput(BaseModel):
+    """List all anchored forecasts (compact overview)."""
+    limit: int = Field(
+        default=20, ge=1, le=100,
+        description="Maximum number of anchors to return (1-100, default 20)",
+    )
+    region: str | None = Field(
+        default=None, min_length=4, max_length=5,
+        description="Optional NUTS2 filter (e.g. 'DEE0'). Omit for all regions.",
+    )
+    crop: str | None = Field(
+        default=None, pattern=r"^(wheat|corn|barley|rapeseed|sunflower)$",
+        description="Optional crop filter. Omit for all crops.",
+    )
+
+
 # ─────────────────────────────────────────────────────────────
 # Tool Registry
 # ─────────────────────────────────────────────────────────────
@@ -527,6 +544,18 @@ TOOLS = {
         ),
         "input_schema": AnchorForecastInput.model_json_schema(),
     },
+    "list_anchors": {
+        "handler": _handle_list_anchors,
+        "description": (
+            "List all anchored forecasts — compact overview of Proof-of-Forecast entries. "
+            "Returns timestamp, region, crop, yield, status for each anchor. "
+            "Optionally filter by region (NUTS2) or crop. "
+            "Use this to track which forecasts have been timestamped on the Bitcoin blockchain "
+            "via OpenTimestamps before comparing with official reports (WASDE, Eurostat). "
+            "Example: list_anchors(limit=10, region='DEE0')"
+        ),
+        "input_schema": ListAnchorsInput.model_json_schema(),
+    },
 }
 
 
@@ -614,6 +643,7 @@ def self_test() -> int:
         ("weather_outlook", {"region": "FRF2", "days": 3}),
         ("crop_forecast", {"crop": "wheat", "region": "DEE0"}),
         ("season_comparison", {"crop": "wheat", "region": "FRF2", "reference_years": 3}),
+        ("list_anchors", {"limit": 5}),
     ]
 
     all_passed = True
