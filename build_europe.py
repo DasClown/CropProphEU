@@ -59,7 +59,7 @@ DAYS_IN_MONTH = {1:31,2:28,3:31,4:30,5:31,6:30,7:31,8:31,9:30,10:31,11:30,12:31}
 
 def fetch_eurostat(country_code, crop_code="C1100"):
     """Fetch crop yields from Eurostat. Returns {year: yield_t_ha}."""
-    url = f"https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/apro_cpshr?format=JSON&lang=EN&crops={crop_code}&strucpro=YI_HU_EU&geo={country_code}"
+    url = f"https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/apro_cpshr?format=JSON&lang=EN&crops={crop_code}&strucpro=YLD_HUMD_EU_T_HA&geo={country_code}"
     req = urllib.request.Request(url, headers={"User-Agent": "crop-mcp/4.0"})
     with urllib.request.urlopen(req, timeout=15) as resp:
         d = json.loads(resp.read().decode())

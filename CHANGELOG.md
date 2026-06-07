@@ -1,5 +1,14 @@
 # Changelog — CropProphEU
 
+## 2026-06-07 — V5.4.4 (Eurostat API Fix + Training Data Refresh 🔄)
+
+### Fixed
+- **Eurostat API `strucpro` parameter**: `YI_HU_EU` → `YLD_HUMD_EU_T_HA` (correct yield data endpoint)
+- **Rapeseed model**: Rebuilt with 1,770 samples (24 countries), MAE 0.334 t/ha (11.1%), R² 0.732
+- **Sunflower model**: Rebuilt with 717 samples (8 countries), MAE 0.355 t/ha (19.0%)
+
+---
+
 ## 2026-05-18 — V5.4.3 (Monthly Outlook + Compact Anchors + ERS Integration 🚀)
 
 ### Added
