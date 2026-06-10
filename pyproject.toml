@@ -33,6 +33,7 @@ dependencies = [
     "requests>=2.31,<3.0",
     # Market data
     "yfinance>=0.2.0,<2.0",
+    "cdsapi>=0.7.7",
 ]
 
 [project.optional-dependencies]
