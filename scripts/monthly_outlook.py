@@ -14,6 +14,10 @@ from datetime import datetime as _dt
 
 from crop_mcp.market_prices import get_market_price, get_production_cost
 
+def log(msg: str):
+    ts = __import__('datetime').datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{ts}] {msg}")
+
 # ── TOP-REGIONEN (EU-weit, nach Anbaufläche & Relevanz) ──
 REGIONS = [
     'DEE0', 'DEF0', 'DE91', 'DE26',     # DE: Sachsen-Anhalt, SH, Nds, Unterfranken
@@ -62,6 +66,43 @@ try:
             ERS_CACHE[rid] = None
 except ImportError:
     pass
+
+# ── FAO GIEWS Datenabruf (NEU) ──
+FAO_DATA = {}
+try:
+    import requests as _req
+    # FAO Stat — Weizenproduktion DE
+    fao_r = _req.get(
+        "https://fenixservices.fao.org/faostat/api/v1/en/QAQ/country/DE",
+        timeout=15
+    )
+    if fao_r.status_code == 200:
+        fao_data = fao_r.json()
+        FAO_DATA['de'] = {
+            'source': 'FAO API',
+            'status': 'ok',
+            'items': len(fao_data.get('data', []))
+        }
+        log(f"  ✅ FAO DE: {FAO_DATA['de']['items']} Datensätze")
+    else:
+        FAO_DATA['de'] = {'source': 'FAO API', 'status': f'HTTP {fao_r.status_code}'}
+        log(f"  ⚠️ FAO DE: HTTP {fao_r.status_code}")
+except Exception as e:
+    FAO_DATA['de'] = {'source': 'FAO API', 'status': f'error: {e}'}
+    log(f"  ⚠️ FAO DE: {e}")
+
+# ── JRC MARS Bulletin Check (NEU) ──
+MARS_AVAILABLE = False
+try:
+    mars_r = _req.get(
+        "https://agri4cast.jrc.ec.europa.eu/Bulletin/Current/index.html",
+        timeout=15
+    )
+    MARS_AVAILABLE = mars_r.status_code == 200
+    log(f"  {'✅' if MARS_AVAILABLE else '⚠️'} JRC MARS Bulletin: {'erreichbar' if MARS_AVAILABLE else f'HTTP {mars_r.status_code}'}")
+except Exception as e:
+    log(f"  ⚠️ JRC MARS: {e}")
+
 
 # ── Historische Eurostat-Daten ──
 DATA_FILES = {
@@ -241,6 +282,12 @@ if r_p:
 print(f"  • Dünger: KAS 27% ~320-340€/t | MAP ~580-610€/t (Mai 2026)")
 print(f"  • La Niña-Risiko Q3 2026: NAO-Index negativ → nasser Norden, trockener Süden")
 print(f"  • Ukraine-Korridor: Verlängerung unwahrscheinlich → +/- 15€/t Risikoaufschlag")
+if FAO_DATA.get('de', {}).get('status') == 'ok':
+    print(f"  • FAO DE: {FAO_DATA['de'].get('items', 0)} Datensätze verfügbar (neue Quelle)")
+else:
+    print(f"  • FAO DE: ⚠️ nicht verfügbar ({FAO_DATA.get('de', {}).get('status', 'unknown')})")
+if MARS_AVAILABLE:
+    print(f"  • JRC MARS Bulletin: ✅ erreichbar — Vergleich bei nächstem Outlook")
 
 # ── COMPACT ANCHORS ──
 try:
