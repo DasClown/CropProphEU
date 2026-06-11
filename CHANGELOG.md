@@ -1,5 +1,20 @@
 # Changelog — CropProphEU
 
+## 2026-06-11 — V5.4.5 (Health Auto-Repair: Price Cache & API Issues 🔧)
+
+### Fixed (Auto-Repair by Health Agent)
+- **Price Cache**: `.price_cache.json` gelöscht (war 29.8h alt, mit Referenzpreisen).
+  - Wheat live: **220 €/t** ✅ (yfinance ZW=F, 2026-06-11)
+  - Corn live: **167 €/t** ✅ (yfinance ZC=F, 2026-06-11)
+- **Open-Meteo**: HTTP 502 war transient — API antwortet wieder mit 200.
+
+### Status
+- Alle cropping models: 3–9 Tage alt (wheat, corn, barley: 9d; rapeseed, sunflower: 3d)
+- Eurostat: Keine neuen Daten (2025er Jahr frühestens ~Nov 2026)
+- Kein Modell-Rebuild erforderlich
+
+---
+
 ## 2026-06-07 — V5.4.4 (Eurostat API Fix + Training Data Refresh 🔄)
 
 ### Fixed
