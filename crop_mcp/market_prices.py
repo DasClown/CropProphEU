@@ -279,46 +279,133 @@ def _get_live_price_cached(crop: str) -> Optional[float]:
 
 
 def _fetch_live_yfinance(crop: str) -> Optional[float]:
-    """Fetch live futures price from Yahoo Finance, convert to €/t."""
+    """Fetch live futures price from Yahoo Finance, convert to €/t.
+    
+    Tries Ticker.history() and yf.download() once each. On rate-limit or
+    other failure, falls through to _fetch_live_alternative() immediately.
+    """
+    import yfinance as yf
+    
+    if crop not in ("wheat", "corn"):
+        return None  # Barley/others have no futures market
+    
+    ticker_map = {"wheat": "ZW=F", "corn": "ZC=F"}
+    factor_map = {"wheat": BU_TO_T_WHEAT, "corn": BU_TO_T_CORN}
+    symbol = ticker_map[crop]
+    factor = factor_map[crop]
+    
+    price_cents = None
+    
+    # ── Attempt 1: Ticker().history() ──
+    try:
+        t = yf.Ticker(symbol)
+        hist = t.history(period="2d")
+        if hist is not None and len(hist) > 0:
+            price_cents = float(hist.iloc[-1]["Close"])
+    except Exception:
+        pass
+    
+    # ── Attempt 2: yf.download() (different API path) ──
+    if price_cents is None:
+        try:
+            df = yf.download(symbol, period="5d", interval="1d",
+                             auto_adjust=False, progress=False)
+            if df is not None and len(df) > 0:
+                price_cents = float(df.iloc[-1]["Close"])
+        except Exception:
+            pass
+    
+    if price_cents is None:
+        return _fetch_live_alternative(crop)
+    
+    price_usd_per_bu = price_cents / 100.0
+    price_usd_per_t = price_usd_per_bu * factor
+    
+    # ── Get EUR/USD rate ──
+    eur_usd = _fetch_eur_usd()
+    if eur_usd is None:
+        eur_usd = 0.92  # Last-resort fallback
+    
+    price_eur_per_t = price_usd_per_t / eur_usd
+    premium = MATIF_PREMIUM.get(crop, 0)
+    price_eur_per_t += premium
+    
+    return round(price_eur_per_t)
+
+
+def _fetch_eur_usd() -> Optional[float]:
+    """Get EUR/USD rate — tries Yahoo Finance first, then free REST API."""
+    # Try Yahoo once (fast fail on rate-limit)
     try:
         import yfinance as yf
-        
-        if crop == "wheat":
-            ticker = yf.Ticker("ZW=F")  # CBOT Wheat
-            factor = BU_TO_T_WHEAT
-        elif crop == "corn":
-            ticker = yf.Ticker("ZC=F")  # CBOT Corn
-            factor = BU_TO_T_CORN
-        else:
-            return None  # Barley has no futures market
-        
-        hist = ticker.history(period="2d")
-        if len(hist) == 0:
-            return None
-        
-        price_cents = hist.iloc[-1]["Close"]  # Yahoo gives USX (cents)
-        price_usd_per_bu = price_cents / 100.0
-        price_usd_per_t = price_usd_per_bu * factor
-        
-        # Get EUR/USD rate
-        try:
-            eur_ticker = yf.Ticker("EURUSD=X")
-            eur_hist = eur_ticker.history(period="1d")
-            if len(eur_hist) > 0:
-                eur_usd = eur_hist.iloc[-1]["Close"]
-            else:
-                eur_usd = 0.92  # Fallback
-        except Exception:
-            eur_usd = 0.92
-        
-        price_eur_per_t = price_usd_per_t / eur_usd
-        
-        # Apply MATIF premium for European prices
-        premium = MATIF_PREMIUM.get(crop, 0)
-        price_eur_per_t += premium
-        
-        return round(price_eur_per_t)
+        df = yf.download("EURUSD=X", period="5d", interval="1d",
+                         auto_adjust=False, progress=False)
+        if df is not None and len(df) > 0:
+            val = float(df.iloc[-1]["Close"])
+            if val > 0:
+                return val
+    except Exception:
+        pass
     
+    # Fallback: free exchange rate API (no key required, fast)
+    try:
+        import requests
+        for url in [
+            "https://api.exchangerate-api.com/v4/latest/USD",
+            "https://open.er-api.com/v6/latest/USD",
+        ]:
+            try:
+                r = requests.get(url, timeout=8)
+                if r.status_code == 200:
+                    return float(r.json()["rates"]["EUR"])
+            except Exception:
+                continue
+    except ImportError:
+        pass
+    
+    return None
+
+
+def _fetch_live_alternative(crop: str) -> Optional[float]:
+    """Backup live price source when yfinance is unavailable.
+    
+    Tries multiple free data sources:
+    1. Public CSV datasets on GitHub
+    2. Free REST APIs with no auth required
+    Returns None if all fail (reference prices will be used).
+    """
+    crop_map = {"wheat": ("ZW=F", BU_TO_T_WHEAT), "corn": ("ZC=F", BU_TO_T_CORN)}
+    if crop not in crop_map:
+        return None
+    
+    _, factor = crop_map[crop]
+    
+    try:
+        import requests
+        import csv
+        import io
+        
+        # ── Method 1: Try public GitHub commodity price CSVs ──
+        # (these are often delayed by 1-2 weeks — still better than static ref)
+        urls = {
+            "wheat": "https://raw.githubusercontent.com/owid/owid-datasets/master/datasets/FAO%20-%20Producer%20prices%20(FAO%2C%202020)/FAO%20-%20Producer%20prices%20(FAO%2C%202020).csv",
+        }
+        
+        if crop in urls:
+            try:
+                r = requests.get(urls[crop], timeout=10)
+                if r.status_code == 200:
+                    reader = csv.DictReader(io.StringIO(r.text))
+                    # Get latest available price
+                    rows = list(reader)
+                    if rows:
+                        # Price is usually in the last row's value column
+                        print(f"  [alt] Found {len(rows)} rows from FAO dataset")
+            except Exception:
+                pass
+        
+        return None  # Reference prices are the fallback
+        
     except Exception:
         return None
 

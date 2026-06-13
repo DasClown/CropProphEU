@@ -1,0 +1,61 @@
+{
+  "timestamp": "2026-06-10T00:12:18.207841",
+  "status": "ok",
+  "duration_s": 3.98,
+  "current": {
+    "status": "completed",
+    "duration_s": 3.98,
+    "cv_mae": 0.5979411761428203,
+    "cv_mae_pct": 11.39848484378967,
+    "mean_yield": 5.245795246800731,
+    "n_samples": 1641,
+    "n_features": 42,
+    "solar_kwh_importance": 0.0319,
+    "top_features": {
+      "coarse_pct": 0.4117,
+      "clay_pct": 0.1422,
+      "soc_g_kg": 0.137,
+      "soil_moisture": 0.0645,
+      "silt_pct": 0.0359
+    },
+    "best_estimator": "Ridge (alpha=5)",
+    "measured_at": "2026-06-10T00:12:18.207841"
+  },
+  "baseline": {
+    "build_duration_s": 4.52,
+    "cv_mae": 0.5979411761428203,
+    "cv_mae_pct": 11.39848484378967,
+    "r2_score": 0.7,
+    "n_samples": 1641,
+    "solar_kwh_importance": 0.0319,
+    "timestamp": "2026-06-10T00:12:10.507945"
+  },
+  "deviations": {
+    "cv_mae": {
+      "baseline": 0.5979411761428203,
+      "current": 0.5979411761428203,
+      "deviation_pct": 0.0,
+      "alert": false
+    },
+    "cv_mae_pct": {
+      "baseline": 11.39848484378967,
+      "current": 11.39848484378967,
+      "deviation_pct": 0.0,
+      "alert": false
+    },
+    "n_samples": {
+      "baseline": 1641.0,
+      "current": 1641.0,
+      "deviation_pct": 0.0,
+      "alert": false
+    },
+    "solar_kwh_importance": {
+      "baseline": 0.0319,
+      "current": 0.0319,
+      "deviation_pct": 0.0,
+      "alert": false
+    }
+  },
+  "alerts": [],
+  "alert_count": 0
+}

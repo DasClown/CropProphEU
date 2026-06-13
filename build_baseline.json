@@ -1,0 +1,9 @@
+{
+  "build_duration_s": 3.98,
+  "cv_mae": 0.5979411761428203,
+  "cv_mae_pct": 11.39848484378967,
+  "r2_score": 0.7,
+  "n_samples": 1641,
+  "solar_kwh_importance": 0.0319,
+  "timestamp": "2026-06-10T00:12:18.214652"
+}
