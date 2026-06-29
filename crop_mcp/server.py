@@ -132,6 +132,13 @@ from .tools.anchor import (
     _handle_anchor_forecast,
     _handle_list_anchors,
 )
+from .tools.wasde import (
+    _handle_wasde_report,
+    _handle_wasde_commodity,
+)
+from .tools.mars_bulletin import (
+    _handle_mars_bulletin,
+)
 
 _start_time = time.time()
 
@@ -396,6 +403,25 @@ class ListAnchorsInput(BaseModel):
 # Tool Registry
 # ─────────────────────────────────────────────────────────────
 
+class WasdeReportInput(BaseModel):
+    """Fetch the latest USDA WASDE report with EU tables: Wheat, Corn, Rice, Soybeans."""
+    pass
+
+
+class WasdeCommodityInput(BaseModel):
+    """Fetch WASDE data for a specific commodity (wheat, corn, rice, soybeans)."""
+    commodity: str = Field(
+        ...,
+        pattern=r"^(wheat|corn|rice|soybeans)$",
+        description="Commodity to fetch. Options: wheat, corn, rice, soybeans. Note: rapeseed/sunflower not in WASDE.",
+    )
+
+
+class MarsBulletinInput(BaseModel):
+    """Fetch the latest JRC MARS Bulletin — EU crop yield forecasts and weather monitoring."""
+    pass
+
+
 TOOLS = {
     "weather_outlook": {
         "handler": _handle_weather_outlook,
@@ -556,8 +582,44 @@ TOOLS = {
         ),
         "input_schema": ListAnchorsInput.model_json_schema(),
     },
+    "wasde_report": {
+        "handler": _handle_wasde_report,
+        "description": (
+            "Fetch the latest USDA WASDE report — World Agricultural Supply and Demand Estimates. "
+            "Downloads the monthly PDF, extracts EU-specific tables for Wheat, Corn, Rice, and Soybeans. "
+            "Returns production, beginning stocks, imports, domestic use, exports, ending stocks, "
+            "and month-over-month changes (May→June delta). "
+            "Use this to validate your crop forecasts against the official USDA global benchmark. "
+            "Note: WASDE does not contain rapeseed/sunflower data — those come from Eurostat. "
+            "Example: wasde_report() — no arguments needed."
+        ),
+        "input_schema": WasdeReportInput.model_json_schema(),
+    },
+    "wasde_commodity": {
+        "handler": _handle_wasde_commodity,
+        "description": (
+            "Fetch WASDE data for a single commodity. "
+            "Available: wheat, corn, rice, soybeans (not rapeseed/sunflower). "
+            "Returns EU-specific supply and use table plus global context. "
+            "Faster than wasde_report if you need only one commodity. "
+            "Example: wasde_commodity(commodity='wheat')"
+        ),
+        "input_schema": WasdeCommodityInput.model_json_schema(),
+    },
+    "mars_bulletin": {
+        "handler": _handle_mars_bulletin,
+        "description": (
+            "Fetch the latest JRC MARS Bulletin — official EU crop yield forecasts. "
+            "The MARS Bulletin is published ~monthly by the European Commission's Joint Research Centre "
+            "and provides NUTS2-level yield forecasts for EU Member States. "
+            "Includes: wheat, corn, barley, rapeseed, sunflower yield tables, "
+            "weather monitoring (GDP, precipitation, frost), and NDVI anomaly maps. "
+            "Note: The JRC server may block automated access — next bulletin expected 2026-06-22. "
+            "Use wasde_report() as alternative for USDA global supply/demand data."
+        ),
+        "input_schema": MarsBulletinInput.model_json_schema(),
+    },
 }
-
 
 # ─────────────────────────────────────────────────────────────
 # MCP Server

@@ -35,23 +35,23 @@ MATIF_PREMIUM = {
     "corn": 25,    # €/t — freight differential
 }
 
-# Reference prices (static fallback)
+# Reference prices (static fallback — auto-updated when live API works)
 REFERENCE_PRICES = {
     "wheat": {
-        "price_eur_per_t": 239,
-        "market": "Euronext MATIF (Paris)",
-        "contract": "EBM Z2026 (Dec 2026)",
-        "source": "Referenzpreis — MATIF Paris / CBOT Chicago (yfinance)",
-        "note": "Brotweizen (mahlfähig), frei Erste-Handelskette",
-        "updated": "2026-05-05",
+        "price_eur_per_t": 235,
+        "market": "CBOT Chicago + MATIF Paris",
+        "contract": "ZW=F (CBOT Wheat Futures)",
+        "source": "Yahoo Finance v8 API (query1.finance.yahoo.com)",
+        "note": "Brotweizen (mahlfähig), CBOT cents/bu → USD/t → EUR/t + MATIF Premium",
+        "updated": "2026-06-15",
     },
     "corn": {
-        "price_eur_per_t": 189,
-        "market": "Euronext MATIF (Paris)",
-        "contract": "EMA Z2026 (Nov 2026)",
-        "source": "Referenzpreis — MATIF Paris / CBOT Chicago (yfinance)",
-        "note": "Körnermais, frei Handelsstufe — MARKT GEFALLEN (CBOT Mai 2026)",
-        "updated": "2026-05-05",
+        "price_eur_per_t": 185,
+        "market": "CBOT Chicago + MATIF Paris",
+        "contract": "ZC=F (CBOT Corn Futures)",
+        "source": "Yahoo Finance v8 API (query1.finance.yahoo.com)",
+        "note": "Körnermais, CBOT cents/bu → USD/t → EUR/t + MATIF Premium",
+        "updated": "2026-06-15",
     },
     "barley": {
         "price_eur_per_t": 190,
@@ -279,75 +279,79 @@ def _get_live_price_cached(crop: str) -> Optional[float]:
 
 
 def _fetch_live_yfinance(crop: str) -> Optional[float]:
-    """Fetch live futures price from Yahoo Finance, convert to €/t.
-    
-    Tries Ticker.history() and yf.download() once each. On rate-limit or
-    other failure, falls through to _fetch_live_alternative() immediately.
+    """Fetch live futures price — direct Yahoo Finance v8 API (no yfinance lib).
+
+    Uses query1.finance.yahoo.com/v8/finance/chart/ directly to avoid
+    yfinance library rate limits (429 Too Many Requests).
+
+    Converts CBOT cents/bushel → USD/t → EUR/t with MATIF premium.
     """
-    import yfinance as yf
-    
     if crop not in ("wheat", "corn"):
-        return None  # Barley/others have no futures market
-    
+        return None  # Barley/rapeseed/sunflower have no CBOT futures
+
     ticker_map = {"wheat": "ZW=F", "corn": "ZC=F"}
     factor_map = {"wheat": BU_TO_T_WHEAT, "corn": BU_TO_T_CORN}
     symbol = ticker_map[crop]
     factor = factor_map[crop]
-    
-    price_cents = None
-    
-    # ── Attempt 1: Ticker().history() ──
-    try:
-        t = yf.Ticker(symbol)
-        hist = t.history(period="2d")
-        if hist is not None and len(hist) > 0:
-            price_cents = float(hist.iloc[-1]["Close"])
-    except Exception:
-        pass
-    
-    # ── Attempt 2: yf.download() (different API path) ──
-    if price_cents is None:
-        try:
-            df = yf.download(symbol, period="5d", interval="1d",
-                             auto_adjust=False, progress=False)
-            if df is not None and len(df) > 0:
-                price_cents = float(df.iloc[-1]["Close"])
-        except Exception:
-            pass
-    
-    if price_cents is None:
-        return _fetch_live_alternative(crop)
-    
-    price_usd_per_bu = price_cents / 100.0
-    price_usd_per_t = price_usd_per_bu * factor
-    
-    # ── Get EUR/USD rate ──
-    eur_usd = _fetch_eur_usd()
-    if eur_usd is None:
-        eur_usd = 0.92  # Last-resort fallback
-    
-    price_eur_per_t = price_usd_per_t / eur_usd
     premium = MATIF_PREMIUM.get(crop, 0)
-    price_eur_per_t += premium
-    
-    return round(price_eur_per_t)
+
+    try:
+        import requests
+        headers = {"User-Agent": "Mozilla/5.0"}
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
+        params = {"range": "5d", "interval": "1d"}
+
+        r = requests.get(url, headers=headers, params=params, timeout=15)
+        if r.status_code != 200:
+            return _fetch_price_alternative(crop)
+
+        data = r.json()
+        result = data.get("chart", {}).get("result")
+        if not result or not isinstance(result, list) or len(result) == 0:
+            return _fetch_price_alternative(crop)
+
+        meta = result[0].get("meta", {})
+        price_cents = meta.get("regularMarketPrice")
+        if price_cents is None:
+            return _fetch_price_alternative(crop)
+
+        # Convert cents/bushel → USD/t → EUR/t
+        price_usd_per_bu = float(price_cents) / 100.0
+        price_usd_per_t = price_usd_per_bu * factor
+
+        eur_usd = _fetch_eur_usd()
+        if eur_usd is None:
+            eur_usd = 0.92  # Last-resort fallback
+
+        price_eur_per_t = price_usd_per_t / eur_usd + premium
+        return round(price_eur_per_t)
+
+    except Exception:
+        return _fetch_price_alternative(crop)
 
 
 def _fetch_eur_usd() -> Optional[float]:
-    """Get EUR/USD rate — tries Yahoo Finance first, then free REST API."""
-    # Try Yahoo once (fast fail on rate-limit)
+    """Get EUR/USD rate — Yahoo Finance v8 API directly (no yfinance lib)."""
     try:
-        import yfinance as yf
-        df = yf.download("EURUSD=X", period="5d", interval="1d",
-                         auto_adjust=False, progress=False)
-        if df is not None and len(df) > 0:
-            val = float(df.iloc[-1]["Close"])
-            if val > 0:
-                return val
+        import requests
+        headers = {"User-Agent": "Mozilla/5.0"}
+        r = requests.get(
+            "https://query1.finance.yahoo.com/v8/finance/chart/EURUSD=X",
+            headers=headers,
+            params={"range": "5d", "interval": "1d"},
+            timeout=15,
+        )
+        if r.status_code == 200:
+            data = r.json()
+            result = data.get("chart", {}).get("result")
+            if result and isinstance(result, list) and len(result) > 0:
+                val = result[0].get("meta", {}).get("regularMarketPrice")
+                if val and float(val) > 0:
+                    return float(val)
     except Exception:
         pass
-    
-    # Fallback: free exchange rate API (no key required, fast)
+
+    # Fallback: free exchange rate API
     try:
         import requests
         for url in [
@@ -362,12 +366,12 @@ def _fetch_eur_usd() -> Optional[float]:
                 continue
     except ImportError:
         pass
-    
+
     return None
 
 
-def _fetch_live_alternative(crop: str) -> Optional[float]:
-    """Backup live price source when yfinance is unavailable.
+def _fetch_price_alternative(crop: str) -> Optional[float]:
+    """Backup live price source when Yahoo Finance v8 API is unavailable.
     
     Tries multiple free data sources:
     1. Public CSV datasets on GitHub
@@ -408,6 +412,10 @@ def _fetch_live_alternative(crop: str) -> Optional[float]:
         
     except Exception:
         return None
+
+
+# Keep old name for backward compatibility
+_fetch_live_alternative = _fetch_price_alternative
 
 
 def _load_cache_from_disk():
