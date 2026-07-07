@@ -13,9 +13,9 @@ from datetime import date
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 sys.path.insert(0, '/home/j/crop-mcp')
-from core.regions import REGIONS, get_crop
-from sources.power import get_power_data
-from sources.power import SOLAR_PARAM, SOIL_M1, T2M_MAX, T2M_MIN, PRECIP
+from crop_mcp.core.regions import REGIONS, get_crop
+from crop_mcp.sources.power import get_power_data
+from crop_mcp.sources.power import SOLAR_PARAM, SOIL_M1, T2M_MAX, T2M_MIN, PRECIP
 
 CACHE_DIR = '/home/j/crop-mcp/feature_cache'
 DAYS_IN_MONTH = {1:31,2:28,3:31,4:30,5:31,6:30,7:31,8:31,9:30,10:31,11:30,12:31}

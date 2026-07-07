@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-06-29
+
+### Health Check
+- ✅ ALL CHECKS PASSED — 18 crop-mcp tools + 28 drug-pipeline tools, 0 issues
+- ✅ Live market prices: Wheat 224 €/t, Corn 169 €/t (both LIVE via Yahoo Finance v8 API)
+- ✅ Training data 22-28 days old (normal — Eurostat 2025 ~Nov)
+- 📦 Committed + pushed: V4.7 — Direct Yahoo Finance API + WASDE/MARS Bulletin Tools (847 new lines)
+
+### Features
+- market_prices.py: Switch from yfinance lib to direct Yahoo Finance v8 API (avoids 429 rate limits)
+- +3 new tools: wasde_report, wasde_commodity, mars_bulletin → 21 tools total
+- New: WASDE PDF parser (USDA global supply/demand for wheat, corn, rice, soybeans)
+- New: MARS Bulletin PDF parser (JRC EU crop yield forecasts)
+
 ## 2026-06-13
 
 ### Health Check
