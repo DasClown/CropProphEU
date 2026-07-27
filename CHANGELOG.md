@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-07-27
+
+### Health Check
+- ✅ Open-Meteo: Temporärer 503 → HTTP 200 (selbst behoben)
+- ⚠️ FAO API: Read timeout (externer Dienst — nicht behebbar, geloggt)
+- ✅ crop-mcp Technik: 18 Tools, 123 Regionen, 5 Kulturen — alle OK
+- ✅ crop-mcp Content: Marktpreise LIVE (Weizen 253 €/t, Mais 191 €/t)
+- ✅ drug-pipeline: 28 Tools voll funktionsfähig
+
+### Rebuilds
+- 🔄 **Raps-Modell** neu gebaut: 1.770 Samples (vorher 1.483), 24 Länder
+  - LOYO MAE: 0.334 t/ha (11,1%) — R² 0.732
+  - Top-Features: clay_pct (31,4%), bdod_kg_dm3 (22,7%), coarse_pct (12,1%)
+- 🔄 **Sonnenblumen-Modell** neu gebaut: 717 Samples, 8 Länder
+  - LOYO MAE: 0.355 t/ha (19,0%) — R² 0.525
+  - Top-Features: sand_pct (31,1%), coarse_pct (19,5%), precip_mm (11,8%)
+- 📊 Beide Modelle von 50–83 Tagen alt auf **frisch vom 27.07.2026**
+
 ## 2026-06-29
 
 ### Health Check
