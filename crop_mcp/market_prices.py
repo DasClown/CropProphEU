@@ -298,14 +298,25 @@ def _fetch_live_yfinance(crop: str) -> Optional[float]:
     try:
         import requests
         headers = {"User-Agent": "Mozilla/5.0"}
-        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
+        # query1 is often rate-limited (HTTP 429); query2 is the working fallback.
+        # Try hosts in order until one returns valid data.
+        hosts = [
+            "https://query1.finance.yahoo.com/v8/finance/chart/",
+            "https://query2.finance.yahoo.com/v8/finance/chart/",
+        ]
         params = {"range": "5d", "interval": "1d"}
-
-        r = requests.get(url, headers=headers, params=params, timeout=15)
-        if r.status_code != 200:
+        data = None
+        for host in hosts:
+            try:
+                r = requests.get(f"{host}{symbol}", headers=headers, params=params, timeout=15)
+                if r.status_code == 200:
+                    data = r.json()
+                    break
+            except Exception:
+                continue
+        if data is None:
             return _fetch_price_alternative(crop)
 
-        data = r.json()
         result = data.get("chart", {}).get("result")
         if not result or not isinstance(result, list) or len(result) == 0:
             return _fetch_price_alternative(crop)
@@ -335,19 +346,24 @@ def _fetch_eur_usd() -> Optional[float]:
     try:
         import requests
         headers = {"User-Agent": "Mozilla/5.0"}
-        r = requests.get(
+        hosts = [
             "https://query1.finance.yahoo.com/v8/finance/chart/EURUSD=X",
-            headers=headers,
-            params={"range": "5d", "interval": "1d"},
-            timeout=15,
-        )
-        if r.status_code == 200:
-            data = r.json()
-            result = data.get("chart", {}).get("result")
-            if result and isinstance(result, list) and len(result) > 0:
-                val = result[0].get("meta", {}).get("regularMarketPrice")
-                if val and float(val) > 0:
-                    return float(val)
+            "https://query2.finance.yahoo.com/v8/finance/chart/EURUSD=X",
+        ]
+        params = {"range": "5d", "interval": "1d"}
+        for host in hosts:
+            try:
+                r = requests.get(host, headers=headers, params=params, timeout=15)
+                if r.status_code == 200:
+                    data = r.json()
+                    result = data.get("chart", {}).get("result")
+                    if result and isinstance(result, list) and len(result) > 0:
+                        val = result[0].get("meta", {}).get("regularMarketPrice")
+                        if val and float(val) > 0:
+                            return float(val)
+                    break
+            except Exception:
+                continue
     except Exception:
         pass
 

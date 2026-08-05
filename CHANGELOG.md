@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-08-05
+
+### Health Check
+- 🔧 **Fix: crop-mcp Server-Import** — `No module named 'joblib'`: Cron-Python (Hermes-Venv) fehlten ML-/Markt-Dependencies. Nachinstalliert via uv (joblib 1.5.3, scikit-learn 1.9.0, pandas 3.0.5, yfinance 1.5.2, cdsapi 0.7.7) + `crop-mcp 5.4.3` editable → Server-Import OK (18 Tools, 123 Regionen, 5 Kulturen)
+- ✅ crop-mcp Content: Marktpreise LIVE (Weizen 238 €/t, Mais 183 €/t) — yfinance v8 API via query1/query2-Fallback
+- ✅ crop-mcp Technik: weather_outlook, market_prices, list_crops, list_regions — alle OK
+- ✅ drug-pipeline: 28 Tools voll funktionsfähig (search_trials, lookup_drug, get_approvals)
+- ⚠️ FAO API: Read timeout (externer Dienst — nicht behebbar, geloggt)
+- ✅ ALL CHECKS PASSED (Exit 0) — keine offenen Issues
+
 ## 2026-07-27
 
 ### Health Check
